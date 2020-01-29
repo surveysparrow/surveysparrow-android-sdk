@@ -16,10 +16,10 @@ import android.webkit.WebView;
  */
 @SuppressLint("SetJavaScriptEnabled")
 public class SsSurveyFragment extends Fragment {
+    private String surveyUrl;
 
-
-    public SsSurveyFragment() {
-        // Required empty public constructor
+    public SsSurveyFragment(String surveyUrl) {
+        this.surveyUrl = surveyUrl;
     }
 
 
@@ -29,7 +29,7 @@ public class SsSurveyFragment extends Fragment {
         WebView ssWebView = new WebView(getActivity());
         ssWebView.getSettings().setJavaScriptEnabled(true);
         ssWebView.getSettings().setDomStorageEnabled(true);
-        ssWebView.loadUrl("https://some-company.surveysparrow.com/s/SDK-Test/tt-b6a21f");
+        ssWebView.loadUrl(this.surveyUrl);
         return ssWebView;
     }
 }

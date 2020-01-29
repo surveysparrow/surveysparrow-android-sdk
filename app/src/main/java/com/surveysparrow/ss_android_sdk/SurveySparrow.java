@@ -1,6 +1,6 @@
 package com.surveysparrow.ss_android_sdk;
 
-import android.content.Context;
+import android.app.Activity;
 import android.content.Intent;
 import android.widget.Toast;
 
@@ -16,7 +16,7 @@ public class SurveySparrow {
         this.survey = survey;
     }
 
-    public void startSurvey(Context context) {
+    public void startSurveyForResult(Activity context, int requestCode) {
         if(!SsHelper.getNetworkState(context)) {
             Toast.makeText(context, "No Network", Toast.LENGTH_SHORT).show();
             return;
@@ -24,6 +24,6 @@ public class SurveySparrow {
 
         Intent intent = new Intent(context, SsSurveyActivity.class);
         intent.putExtra(SURVEY_URL, this.survey.getSsUrl());
-        context.startActivity(intent);
+        context.startActivityForResult(intent, requestCode);
     }
 }

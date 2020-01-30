@@ -14,6 +14,7 @@ import com.surveysparrow.ss_android_sdk.helpers.OnResponseEventListener;
 import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 
 public class SsSurveyActivity extends AppCompatActivity implements OnResponseEventListener {
+    private boolean isSurveyComplete = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,9 +33,18 @@ public class SsSurveyActivity extends AppCompatActivity implements OnResponseEve
 
     @Override
     public void responseEvent(String data) {
+        this.isSurveyComplete = true;
         Intent resultIntent = new Intent();
         resultIntent.setData(Uri.parse(data));
         setResult(RESULT_OK, resultIntent);
         finish();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if(!this.isSurveyComplete) {
+            setResult(RESULT_CANCELED);
+        }
+        super.onDestroy();
     }
 }

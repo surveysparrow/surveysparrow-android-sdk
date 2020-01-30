@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if(requestCode == SURVEY_REQUEST_CODE) {
+        if(requestCode == SURVEY_REQUEST_CODE && resultCode == RESULT_OK) {
             Log.v("EEE", data.getData().toString());
         }
     }

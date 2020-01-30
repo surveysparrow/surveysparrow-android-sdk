@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 
+import com.surveysparrow.ss_android_sdk.models.SsActivityConfig;
 import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 
 public class MainActivity extends AppCompatActivity {
@@ -21,7 +22,11 @@ public class MainActivity extends AppCompatActivity {
 
     public void startSurvey(View v) {
         SsSurvey survey = new SsSurvey("some-company.surveysparrow.com", "tt-b6a21f");
-        SurveySparrow ss = new SurveySparrow(survey);
+        SsActivityConfig activityConfig = new SsActivityConfig();
+        activityConfig.setActivityTheme(R.style.AppTheme);
+        activityConfig.setAppBarTitle("Survey Sparrow");
+        activityConfig.enableBackButton(true);
+        SurveySparrow ss = new SurveySparrow(survey, activityConfig);
         ss.startSurveyForResult(this, SURVEY_REQUEST_CODE);
     }
 

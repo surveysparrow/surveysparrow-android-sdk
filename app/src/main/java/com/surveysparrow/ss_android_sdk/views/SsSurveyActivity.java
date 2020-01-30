@@ -17,7 +17,7 @@ import com.surveysparrow.ss_android_sdk.helpers.OnResponseEventListener;
 import com.surveysparrow.ss_android_sdk.models.SsActivityConfig;
 import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 
-public class SsSurveyActivity extends AppCompatActivity implements OnResponseEventListener {
+public final class SsSurveyActivity extends AppCompatActivity implements OnResponseEventListener {
     private boolean isSurveyComplete = false;
 
     @Override
@@ -62,7 +62,7 @@ public class SsSurveyActivity extends AppCompatActivity implements OnResponseEve
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if(item.getItemId() == android.R.id.home) {
+        if (item.getItemId() == android.R.id.home) {
             finish();
             return true;
         }

@@ -4,7 +4,7 @@ import com.surveysparrow.ss_android_sdk.R;
 
 import java.io.Serializable;
 
-public class SsActivityConfig implements Serializable {
+public final class SsActivityConfig implements Serializable {
     private int activityTheme = R.style.SurveyTheme;
     private String appBarTitle = "Feedback";
     private boolean enableBackButton = false;

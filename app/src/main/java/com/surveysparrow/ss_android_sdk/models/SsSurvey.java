@@ -2,7 +2,7 @@ package com.surveysparrow.ss_android_sdk.models;
 
 import java.io.Serializable;
 
-public class SsSurvey implements Serializable {
+public final class SsSurvey implements Serializable {
     private String ssUrl;
 
     public SsSurvey(String ssDomain, String ssSurveyToken) {

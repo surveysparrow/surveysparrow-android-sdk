@@ -22,7 +22,7 @@ import com.surveysparrow.ss_android_sdk.models.SsSurvey;
  * A simple {@link Fragment} subclass.
  */
 @SuppressLint("SetJavaScriptEnabled")
-public class SsSurveyFragment extends Fragment {
+public final class SsSurveyFragment extends Fragment {
     private SsSurvey survey;
 
     private OnResponseEventListener onResponseEventListener;
@@ -50,7 +50,6 @@ public class SsSurveyFragment extends Fragment {
     }
 
 
-
     private class JsObject {
         private Context context;
 
@@ -60,7 +59,6 @@ public class SsSurveyFragment extends Fragment {
 
         @JavascriptInterface
         public void shareData(String data) {
-            Log.v("EEE", "Good");
             onResponseEventListener.responseEvent(data);
         }
     }

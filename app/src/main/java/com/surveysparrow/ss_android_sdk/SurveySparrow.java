@@ -9,7 +9,7 @@ import com.surveysparrow.ss_android_sdk.models.SsActivityConfig;
 import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 import com.surveysparrow.ss_android_sdk.views.SsSurveyActivity;
 
-public class SurveySparrow {
+public final class SurveySparrow {
     private SsSurvey survey;
     private SsActivityConfig activityConfig;
     public static final String SS_SURVEY = "SS_SURVEY";
@@ -26,7 +26,7 @@ public class SurveySparrow {
     }
 
     public void startSurveyForResult(Activity context, int requestCode) {
-        if(!SsHelper.getNetworkState(context)) {
+        if (!SsHelper.getNetworkState(context)) {
             Toast.makeText(context, "No Network", Toast.LENGTH_SHORT).show();
             return;
         }

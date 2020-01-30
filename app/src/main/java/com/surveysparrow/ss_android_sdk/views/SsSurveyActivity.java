@@ -11,6 +11,7 @@ import android.os.Bundle;
 import com.surveysparrow.ss_android_sdk.R;
 import com.surveysparrow.ss_android_sdk.SurveySparrow;
 import com.surveysparrow.ss_android_sdk.helpers.OnResponseEventListener;
+import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 
 public class SsSurveyActivity extends AppCompatActivity implements OnResponseEventListener {
 
@@ -19,12 +20,12 @@ public class SsSurveyActivity extends AppCompatActivity implements OnResponseEve
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ss_survey);
 
-        String surveyUrl = getIntent().getStringExtra(SurveySparrow.SURVEY_URL);
+        SsSurvey survey = (SsSurvey) getIntent().getSerializableExtra(SurveySparrow.SS_SURVEY);
 
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 
-        SsSurveyFragment surveyFragment = new SsSurveyFragment(surveyUrl);
+        SsSurveyFragment surveyFragment = new SsSurveyFragment(survey);
         fragmentTransaction.add(R.id.surveyContainer, surveyFragment);
         fragmentTransaction.commit();
     }

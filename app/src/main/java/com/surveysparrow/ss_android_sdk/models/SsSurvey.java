@@ -1,22 +1,12 @@
 package com.surveysparrow.ss_android_sdk.models;
 
-public class SsSurvey {
-    private String ssDomain;
-    private String ssSurveyToken;
+import java.io.Serializable;
+
+public class SsSurvey implements Serializable {
     private String ssUrl;
 
     public SsSurvey(String ssDomain, String ssSurveyToken) {
-        this.ssDomain = ssDomain;
-        this.ssSurveyToken = ssSurveyToken;
-        this.ssUrl = "https://" + this.ssDomain + "/s/android/" + this.ssSurveyToken;
-    }
-
-    public String getSsDomain() {
-        return ssDomain;
-    }
-
-    public String getSsSurveyToken() {
-        return ssSurveyToken;
+        this.ssUrl = "https://" + ssDomain + "/s/android/" + ssSurveyToken;
     }
 
     public String getSsUrl() {

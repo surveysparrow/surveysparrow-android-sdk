@@ -16,18 +16,19 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 
 import com.surveysparrow.ss_android_sdk.helpers.OnResponseEventListener;
+import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 
 /**
  * A simple {@link Fragment} subclass.
  */
 @SuppressLint("SetJavaScriptEnabled")
 public class SsSurveyFragment extends Fragment {
-    private String surveyUrl;
+    private SsSurvey survey;
 
     private OnResponseEventListener onResponseEventListener;
 
-    public SsSurveyFragment(String surveyUrl) {
-        this.surveyUrl = surveyUrl;
+    public SsSurveyFragment(SsSurvey survey) {
+        this.survey = survey;
     }
 
     @Override
@@ -43,7 +44,7 @@ public class SsSurveyFragment extends Fragment {
         ssWebView.getSettings().setJavaScriptEnabled(true);
         ssWebView.getSettings().setDomStorageEnabled(true);
         ssWebView.addJavascriptInterface(new JsObject(getActivity()), "SsAndroidSdk");
-        ssWebView.loadUrl(this.surveyUrl);
+        ssWebView.loadUrl(this.survey.getSsUrl());
 //        ssWebView.loadUrl("https://react-7hjmqi.stackblitz.io");
         return ssWebView;
     }
@@ -58,7 +59,7 @@ public class SsSurveyFragment extends Fragment {
         }
 
         @JavascriptInterface
-        public void sendToJava(String data) {
+        public void shareData(String data) {
             Log.v("EEE", "Good");
             onResponseEventListener.responseEvent(data);
         }

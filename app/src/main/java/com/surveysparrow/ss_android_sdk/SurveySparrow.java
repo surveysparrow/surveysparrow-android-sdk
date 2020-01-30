@@ -10,7 +10,7 @@ import com.surveysparrow.ss_android_sdk.views.SsSurveyActivity;
 
 public class SurveySparrow {
     private SsSurvey survey;
-    public static final String SURVEY_URL = "SURVEY_URL";
+    public static final String SS_SURVEY = "SS_SURVEY";
 
     SurveySparrow(SsSurvey survey) {
         this.survey = survey;
@@ -23,7 +23,7 @@ public class SurveySparrow {
         }
 
         Intent intent = new Intent(context, SsSurveyActivity.class);
-        intent.putExtra(SURVEY_URL, this.survey.getSsUrl());
+        intent.putExtra(SS_SURVEY, this.survey);
         context.startActivityForResult(intent, requestCode);
     }
 }

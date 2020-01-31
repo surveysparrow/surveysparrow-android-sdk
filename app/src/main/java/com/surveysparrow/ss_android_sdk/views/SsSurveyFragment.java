@@ -8,14 +8,13 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 
-import com.surveysparrow.ss_android_sdk.helpers.OnResponseEventListener;
+import com.surveysparrow.ss_android_sdk.helpers.OnSsResponseEventListener;
 import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 
 /**
@@ -25,7 +24,7 @@ import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 public final class SsSurveyFragment extends Fragment {
     private SsSurvey survey;
 
-    private OnResponseEventListener onResponseEventListener;
+    private OnSsResponseEventListener onSsResponseEventListener;
 
     public SsSurveyFragment(SsSurvey survey) {
         this.survey = survey;
@@ -34,7 +33,7 @@ public final class SsSurveyFragment extends Fragment {
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        onResponseEventListener = (OnResponseEventListener) context;
+        onSsResponseEventListener = (OnSsResponseEventListener) context;
     }
 
     @Override
@@ -59,7 +58,7 @@ public final class SsSurveyFragment extends Fragment {
 
         @JavascriptInterface
         public void shareData(String data) {
-            onResponseEventListener.responseEvent(data);
+            onSsResponseEventListener.responseEvent(data);
         }
     }
 }

@@ -1,6 +1,11 @@
 <resources>
     <string name="app_name">ss-android-sdk</string>
 
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="ss_activity_title">Feedback</string>
+    <string name="no_network_message">No Network!</string>
+    <string name="dialog_title">Rate us</string>
+    <string name="dialog_message">Share your feedback and let us know how we are doing</string>
+    <string name="dialog_positive_button">Rate now</string>
+    <string name="dialog_negative_button">Never</string>
+    <string name="dialog_neutral_button">Later</string>
 </resources>

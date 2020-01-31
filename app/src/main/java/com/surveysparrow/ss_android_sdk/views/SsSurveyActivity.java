@@ -13,32 +13,29 @@ import android.view.MenuItem;
 
 import com.surveysparrow.ss_android_sdk.R;
 import com.surveysparrow.ss_android_sdk.SurveySparrow;
-import com.surveysparrow.ss_android_sdk.helpers.OnResponseEventListener;
-import com.surveysparrow.ss_android_sdk.models.SsActivityConfig;
+import com.surveysparrow.ss_android_sdk.helpers.OnSsResponseEventListener;
 import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 
-public final class SsSurveyActivity extends AppCompatActivity implements OnResponseEventListener {
+public final class SsSurveyActivity extends AppCompatActivity implements OnSsResponseEventListener {
     private boolean isSurveyComplete = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        SsActivityConfig activityConfig = (SsActivityConfig) getIntent().getSerializableExtra(SurveySparrow.SS_ACTIVITY_CONFIG);
-        setTheme(activityConfig.getActivityTheme());
+        Intent intent = getIntent();
+        setTheme(intent.getIntExtra(SurveySparrow.SS_ACTIVITY_THME, R.style.SurveyTheme));
         setContentView(R.layout.activity_ss_survey);
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
-            actionBar.setTitle(activityConfig.getAppBarTitle());
-            actionBar.setDisplayHomeAsUpEnabled(activityConfig.isEnableBackButton());
+            actionBar.setTitle(intent.getStringExtra(SurveySparrow.SS_APPBAR_TITLE));
+            actionBar.setDisplayHomeAsUpEnabled(intent.getBooleanExtra(SurveySparrow.SS_BACK_BUTTON, true));
         }
-
-        SsSurvey survey = (SsSurvey) getIntent().getSerializableExtra(SurveySparrow.SS_SURVEY);
 
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 
-        SsSurveyFragment surveyFragment = new SsSurveyFragment(survey);
+        SsSurveyFragment surveyFragment = new SsSurveyFragment((SsSurvey) intent.getSerializableExtra(SurveySparrow.SS_SURVEY));
         fragmentTransaction.add(R.id.surveyContainer, surveyFragment);
         fragmentTransaction.commit();
     }

@@ -1,5 +1,5 @@
 package com.surveysparrow.ss_android_sdk.helpers;
 
-public interface OnResponseEventListener {
+public interface OnSsResponseEventListener {
     public void responseEvent(String data);
 }

@@ -24,12 +24,12 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 
-import com.surveysparrow.ss_android_sdk.SurveySparrow;
-import com.surveysparrow.ss_android_sdk.OnSsResponseEventListener;
-import com.surveysparrow.ss_android_sdk.SsSurvey;
-
 /**
- * A simple {@link Fragment} subclass.
+ * Fragment that display the Survey Sparrow survey.
+ * Use this fragment to display survey in your activity.
+ * To get the survey response implement the OnSsResponseEventListener
+ * & override the onSsResponseEvent Method.
+ * @see OnSsResponseEventListener
  */
 @SuppressLint("SetJavaScriptEnabled")
 public final class SsSurveyFragment extends Fragment {
@@ -39,6 +39,11 @@ public final class SsSurveyFragment extends Fragment {
 
     private OnSsResponseEventListener onSsResponseEventListener;
 
+    /**
+     * Create SsSurveyFragment.
+     * @param survey SsSurvey object.
+     * @see SsSurvey
+     */
     public SsSurveyFragment(SsSurvey survey) {
         this.survey = survey;
     }

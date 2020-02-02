@@ -7,21 +7,44 @@ public final class SsSurvey implements Serializable {
     private String surveyToken;
     private String customVariableString = "?";
 
+    /**
+     * Custom param class
+     */
     public static class CustomParam {
         private CharSequence name;
         private CharSequence value;
 
+        /**
+         * Create custom param.
+         *
+         * @param name Custom param name.
+         * @param value Custom param value.
+         */
         public CustomParam(CharSequence name, CharSequence value) {
             this.name = name;
             this.value = value;
         }
     }
 
+    /**
+     * Create SsSurvey.
+     *
+     * @param domain Domain name.
+     * @param surveyToken Survey token.
+     */
     public SsSurvey(CharSequence domain, CharSequence surveyToken) {
         this.baseUrl = generateBaseUrl(domain, surveyToken);
         this.surveyToken = surveyToken.toString();
     }
 
+    /**
+     * Create SsSurvey with custom params
+     *
+     * @param domain Domain name.
+     * @param surveyToken Survey Token.
+     * @param customParams CustomParams Array.
+     * @see CustomParam
+     */
     public SsSurvey(CharSequence domain, CharSequence surveyToken, CustomParam[] customParams) {
         this.baseUrl = generateBaseUrl(domain, surveyToken);
         addCustomParams(customParams);
@@ -35,16 +58,40 @@ public final class SsSurvey implements Serializable {
         return surveyToken;
     }
 
+    /**
+     * Add custom param to survey.
+     *
+     * @param customParam CustomParam object
+     * @return Returns the same SurveySparrow object, for chaining
+     * multiple calls into a single statement.
+     * @see CustomParam
+     */
     public SsSurvey addCustomParam(CustomParam customParam) {
         addCustomParam(customParam.name, customParam.value);
         return this;
     }
 
+    /**
+     * Add custom params by name & value
+     *
+     * @param name Custom param name
+     * @param value Custom param value
+     * @return Returns the same SurveySparrow object, for chaining
+     * multiple calls into a single statement.
+     */
     public  SsSurvey addCustomParam(CharSequence name, CharSequence value) {
         customVariableString += name + "=" + value + "&";
         return this;
     }
 
+    /**
+     * Add multiple custom params at once.
+     *
+     * @param customParams CustomParam object array
+     * @return Returns the same SurveySparrow object, for chaining
+     * multiple calls into a single statement.
+     * @see CustomParam
+     */
     public SsSurvey addCustomParams(CustomParam[] customParams) {
         for (CustomParam customParam : customParams) {
             addCustomParam(customParam);

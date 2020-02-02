@@ -18,6 +18,9 @@ import androidx.annotation.StyleRes;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Survey Sparrow helper class.
+ */
 public final class SurveySparrow {
     private SsSurvey survey;
     private Activity context;
@@ -84,8 +87,9 @@ public final class SurveySparrow {
      * in the calling activity.
      *
      * @param context The Activity that start the SsSurveyActivity and handle the response
-     *                on the onActivityResult method
-     * @param survey  The SsSurvey object that contain the Survey Sparrow account domain and token
+     *                on the onActivityResult method.
+     * @param survey  The SsSurvey object that contain the Survey Sparrow account domain and token.
+     * @see SsSurvey
      */
     public SurveySparrow(Activity context, SsSurvey survey) {
         this.survey = survey;

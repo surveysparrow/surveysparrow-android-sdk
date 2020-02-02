@@ -14,9 +14,6 @@ import androidx.annotation.IntDef;
 import androidx.annotation.StringRes;
 import androidx.annotation.StyleRes;
 
-import com.surveysparrow.ss_android_sdk.models.SsSurvey;
-import com.surveysparrow.ss_android_sdk.views.SsSurveyActivity;
-
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
@@ -111,7 +108,7 @@ public final class SurveySparrow {
      *                    calling Activity to handle the response.
      */
     public void startSurveyForResult(int requestCode) {
-        if (isNoNetwork()) {
+        if (!isNetworkConnected()) {
             Toast.makeText(context, R.string.no_network_message, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -369,7 +366,7 @@ public final class SurveySparrow {
             return;
         }
 
-        if (isNoNetwork()) {
+        if (!isNetworkConnected()) {
             return;
         }
 
@@ -409,7 +406,7 @@ public final class SurveySparrow {
         prefEditor.apply();
     }
 
-    private boolean isNoNetwork() {
+    private boolean isNetworkConnected() {
         ConnectivityManager cm =
                 (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();

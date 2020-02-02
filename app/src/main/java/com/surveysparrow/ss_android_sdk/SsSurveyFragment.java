@@ -1,4 +1,4 @@
-package com.surveysparrow.ss_android_sdk.views;
+package com.surveysparrow.ss_android_sdk;
 
 
 import android.animation.ObjectAnimator;
@@ -23,8 +23,8 @@ import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 
 import com.surveysparrow.ss_android_sdk.SurveySparrow;
-import com.surveysparrow.ss_android_sdk.helpers.OnSsResponseEventListener;
-import com.surveysparrow.ss_android_sdk.models.SsSurvey;
+import com.surveysparrow.ss_android_sdk.OnSsResponseEventListener;
+import com.surveysparrow.ss_android_sdk.SsSurvey;
 
 /**
  * A simple {@link Fragment} subclass.

@@ -1,4 +1,4 @@
-package com.surveysparrow.ss_android_sdk.views;
+package com.surveysparrow.ss_android_sdk;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
@@ -11,11 +11,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.MenuItem;
-
-import com.surveysparrow.ss_android_sdk.R;
-import com.surveysparrow.ss_android_sdk.SurveySparrow;
-import com.surveysparrow.ss_android_sdk.helpers.OnSsResponseEventListener;
-import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 
 public final class SsSurveyActivity extends AppCompatActivity implements OnSsResponseEventListener {
     private SsSurvey survey;

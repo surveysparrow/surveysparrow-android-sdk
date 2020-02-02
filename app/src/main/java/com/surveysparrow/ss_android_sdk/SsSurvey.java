@@ -1,4 +1,4 @@
-package com.surveysparrow.ss_android_sdk.models;
+package com.surveysparrow.ss_android_sdk;
 
 import java.io.Serializable;
 
@@ -27,11 +27,11 @@ public final class SsSurvey implements Serializable {
         addCustomParams(customParams);
     }
 
-    public String getSsUrl() {
+    String getSsUrl() {
         return baseUrl + customVariableString;
     }
 
-    public String getSurveyToken() {
+    String getSurveyToken() {
         return surveyToken;
     }
 

@@ -21,7 +21,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".views.SsSurveyActivity"
+            android:name=".SsSurveyActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
     </application>
 

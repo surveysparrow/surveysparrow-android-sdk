@@ -8,8 +8,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 
-import com.surveysparrow.ss_android_sdk.models.SsSurvey;
-
 public class MainActivity extends AppCompatActivity {
     private final int SURVEY_REQUEST_CODE = 55;
 

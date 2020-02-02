@@ -52,6 +52,8 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
         resultIntent.setData(Uri.parse(data));
         setResult(RESULT_OK, resultIntent);
 
+        SurveySparrow.setAlreadyTaken(this, survey.getSurveyToken());
+
         Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
             @Override

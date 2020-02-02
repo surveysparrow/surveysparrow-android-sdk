@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.IntDef;
@@ -359,6 +360,10 @@ public final class SurveySparrow {
         fetchFromPref();
         final long now = new Date().getTime();
 
+        Log.v("EEE", _isAlreadyTaken + "");
+        Log.v("EEE", now + "");
+        Log.v("EEE", _promptTime + "");
+
         if (_promptTime == -1) {
             _promptTime = now + startAfter;
             _incrementMultiplier = 2;
@@ -394,7 +399,7 @@ public final class SurveySparrow {
         SharedPreferences sharedPreferences = context.getSharedPreferences(schedulePrefFileName, Context.MODE_PRIVATE);
         _isAlreadyTaken = sharedPreferences.getBoolean(SHARED_PREF_IS_TAKEN, false);
         _promptTime = sharedPreferences.getLong(SHARED_PREF_PROMPT_TIME, -1);
-        _incrementMultiplier = sharedPreferences.getInt(SHARED_PREF_INCREMENT, 2);
+        _incrementMultiplier = sharedPreferences.getInt(SHARED_PREF_INCREMENT, 1);
     }
 
     private void storeToPref() {
@@ -403,6 +408,13 @@ public final class SurveySparrow {
         prefEditor.putLong(SHARED_PREF_PROMPT_TIME, _promptTime);
         prefEditor.putBoolean(SHARED_PREF_IS_TAKEN, _isAlreadyTaken);
         prefEditor.putInt(SHARED_PREF_INCREMENT, _incrementMultiplier);
+        prefEditor.apply();
+    }
+
+    static void setAlreadyTaken(Context context, String token) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(SHARED_PREF_FILE + "." + token, Context.MODE_PRIVATE);
+        SharedPreferences.Editor prefEditor = sharedPreferences.edit();
+        prefEditor.putBoolean(SHARED_PREF_IS_TAKEN, true);
         prefEditor.apply();
     }
 

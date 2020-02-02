@@ -54,6 +54,7 @@ public final class SurveySparrow {
     public static final String SS_BACK_BUTTON = "SS_BACK_BUTTON";
     public static final String SS_WAIT_TIME = "SS_WAIT_TIME";
     public static final long SS_DEFAULT_WAIT_TIME = 3000;
+    public static final String SS_THANKYOU_BASE_URL = "https://surveysparrow.com/thankyou";
 
     private static final String SHARED_PREF_FILE = "com.surveysparrow.android-sdk.SsSurveySharedPref";
     private static final String SHARED_PREF_IS_TAKEN = "IS_ALREADY_TAKEN";

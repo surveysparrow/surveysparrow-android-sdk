@@ -1,9 +1,14 @@
 package com.surveysparrow.ss_android_sdk;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.widget.Toast;
 
+import androidx.annotation.IntDef;
 import androidx.annotation.StringRes;
 import androidx.annotation.StyleRes;
 
@@ -11,13 +16,37 @@ import com.surveysparrow.ss_android_sdk.helpers.SsHelper;
 import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 import com.surveysparrow.ss_android_sdk.views.SsSurveyActivity;
 
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
+
 public final class SurveySparrow {
     private SsSurvey survey;
     private Activity context;
-    private int activityTheme;
+    private int activityTheme = R.style.SurveyTheme;
     private CharSequence appBarTitle;
-    private boolean enableBackButton;
-    private long waitTime;
+    private boolean enableBackButton = true;
+    private long waitTime = 3000;
+
+    private CharSequence dialogTitle;
+    private CharSequence dialogMessage;
+    private CharSequence dialogPositiveButtonText;
+    private CharSequence dialogNegativeButtonText;
+
+    private long startAfter = TimeUnit.DAYS.toMillis(5);;
+    private long repeatInterval = TimeUnit.DAYS.toMillis(10);
+    private int repeatType = REPEAT_TYPE_INCREMENTAL;
+    private int feedbackType = SINGLE_FEEDBACK;
+
+    private static boolean debugMode = false;
+
+    private boolean _isAlreadyTaken;
+    private long _promptTime;
+    private int _incrementMultiplier;
+
+    public static final int REPEAT_TYPE_CONSTANT = 1;
+    public static final int REPEAT_TYPE_INCREMENTAL = 2;
+    public static final int SINGLE_FEEDBACK = 1;
+    public static final int MULTIPLE_FEEDBACK = 2;
 
     public static final String SS_SURVEY = "SS_SURVEY";
     public static final String SS_ACTIVITY_THME = "SS_ACTIVITY_THEME";
@@ -25,23 +54,25 @@ public final class SurveySparrow {
     public static final String SS_BACK_BUTTON = "SS_BACK_BUTTON";
     public static final String SS_WAIT_TIME = "SS_WAIT_TIME";
 
-
     private static final String SHARED_PREF_FILE = "com.surveysparrow.android-sdk.SsSurveySharedPref";
     private static final String SHARED_PREF_IS_TAKEN = "IS_ALREADY_TAKEN";
-    private static final String SHARED_PREF_NEXT_PROMPT = "LAST_TAKEN";
-    private static final int DEFAULT_WAIT_TIME = 3000;
+    private static final String SHARED_PREF_PROMPT_TIME = "PROMPT_TIME";
+    private static final String SHARED_PREF_INCREMENT = "INCREMENT_MULTIPLIER";
 
     public SurveySparrow(Activity context, SsSurvey survey) {
         this.survey = survey;
         this.context = context;
-        activityTheme = R.style.SurveyTheme;
-        enableBackButton = true;
+
         appBarTitle = context.getString(R.string.ss_activity_title);
-        waitTime = DEFAULT_WAIT_TIME;
+
+        dialogTitle = context.getString(R.string.dialog_title);
+        dialogMessage = context.getString(R.string.dialog_message);
+        dialogPositiveButtonText = context.getString(R.string.dialog_positive_button);
+        dialogNegativeButtonText = context.getString(R.string.dialog_negative_button);
     }
 
     public void startSurveyForResult(int requestCode) {
-        if (!SsHelper.getNetworkState(context)) {
+        if (!SsHelper.isNetworkConnected(context)) {
             Toast.makeText(context, R.string.no_network_message, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -53,6 +84,10 @@ public final class SurveySparrow {
         intent.putExtra(SS_BACK_BUTTON, enableBackButton);
         intent.putExtra(SS_WAIT_TIME, waitTime);
         context.startActivityForResult(intent, requestCode);
+    }
+
+    public static void enableDebugMode(boolean enable) {
+        debugMode = enable;
     }
 
     public SurveySparrow setActivityTheme(@StyleRes int themeId) {
@@ -80,19 +115,122 @@ public final class SurveySparrow {
         return this;
     }
 
-    //    public void scheduleAppRating(int startAfter, int repeatType, int requestCode, String dialogTitle, String dialogMessage, String dialogPositiveButton, String dialogNegativeButton, String dialogNeutralButton) {
-//        SharedPreferences sharedPreferences = context.getSharedPreferences(SHARED_PREF_FILE, Context.MODE_PRIVATE);
-//        SharedPreferences.Editor sharedPrefEditor = sharedPreferences.edit();
-//        boolean isAlreadyTaken = sharedPreferences.getBoolean(SHARED_PREF_IS_TAKEN, false);
-//        long nextPrompt = sharedPreferences.getLong(SHARED_PREF_NEXT_PROMPT, -1);
-//        long now = new Date().getTime();
-//        if(nextPrompt == -1) {
-//            sharedPrefEditor.putLong(SHARED_PREF_NEXT_PROMPT, nextPrompt);
-//        } else if(nextPrompt > now) {
-//
-//        }
-//        sharedPrefEditor.apply();
-//
-//        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-//    }
+    public SurveySparrow setDialogTitle(CharSequence title) {
+        dialogTitle = title;
+        return this;
+    }
+
+    public SurveySparrow setDialogTitle(@StringRes int titleId) {
+        dialogTitle = context.getString(titleId);
+        return this;
+    }
+
+    public SurveySparrow setDialogMessage(CharSequence message) {
+        dialogMessage = message;
+        return this;
+    }
+
+    public SurveySparrow setDialogMessage(@StringRes int messageId) {
+        dialogMessage = context.getString(messageId);
+        return this;
+    }
+
+    public SurveySparrow setDialogPostiveButtonText(CharSequence text) {
+        dialogPositiveButtonText = text;
+        return this;
+    }
+
+    public SurveySparrow setDialogPostiveButtonText(@StringRes int text) {
+        dialogPositiveButtonText = context.getString(text);
+        return this;
+    }
+
+    public SurveySparrow setDialogNegativeButtonText(CharSequence text) {
+        dialogNegativeButtonText = text;
+        return this;
+    }
+
+    public SurveySparrow setDialogNegativeButtonText(@StringRes int text) {
+        dialogNegativeButtonText = context.getString(text);
+        return this;
+    }
+
+    public SurveySparrow setStartAfter(long milliseconds) {
+        this.startAfter = milliseconds;
+        return this;
+    }
+
+    public SurveySparrow setRepeatInterval(long milliseconds) {
+        this.repeatInterval = milliseconds;
+        return this;
+    }
+
+    @IntDef({REPEAT_TYPE_CONSTANT, REPEAT_TYPE_INCREMENTAL})
+    private @interface RepeatType {}
+
+    public SurveySparrow setRepeatType(@RepeatType int repeatType) {
+        this.repeatType = repeatType;
+        return this;
+    }
+
+    @IntDef({SINGLE_FEEDBACK, MULTIPLE_FEEDBACK})
+    private @interface FeedbackType {}
+
+    public SurveySparrow setFeedbackType(@FeedbackType int feedbackType) {
+        this.feedbackType = feedbackType;
+        return this;
+    }
+
+    public void scheduleSurvey(final int requestCode) {
+        fetchFromPref();
+        final long now = new Date().getTime();
+
+        if(_promptTime == -1) {
+            _promptTime = now + startAfter;
+            storeToPref();
+            return;
+        }
+
+        if(!SsHelper.isNetworkConnected(context)) {
+            return;
+        }
+
+        if (_promptTime < now && (!_isAlreadyTaken || feedbackType == MULTIPLE_FEEDBACK)) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setTitle(dialogTitle)
+                    .setMessage(dialogMessage)
+                    .setPositiveButton(dialogPositiveButtonText, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            startSurveyForResult(requestCode);
+                            dialog.dismiss();
+                        }
+                    })
+                    .setNegativeButton(dialogNegativeButtonText, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            _promptTime = now + (repeatInterval * (repeatType == REPEAT_TYPE_INCREMENTAL ? _incrementMultiplier : 1));
+                            storeToPref();
+                        }
+                    });
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        }
+    }
+
+    private void fetchFromPref() {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(SHARED_PREF_FILE, Context.MODE_PRIVATE);
+        _isAlreadyTaken = sharedPreferences.getBoolean(SHARED_PREF_IS_TAKEN, false);
+        _promptTime = sharedPreferences.getLong(SHARED_PREF_PROMPT_TIME, -1);
+        _incrementMultiplier = sharedPreferences.getInt(SHARED_PREF_INCREMENT, 2);
+    }
+
+    private void storeToPref() {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(SHARED_PREF_FILE, Context.MODE_PRIVATE);
+        SharedPreferences.Editor prefEditor = sharedPreferences.edit();
+        prefEditor.putLong(SHARED_PREF_PROMPT_TIME, _promptTime);
+        prefEditor.putBoolean(SHARED_PREF_IS_TAKEN, _isAlreadyTaken);
+        prefEditor.putInt(SHARED_PREF_INCREMENT, _incrementMultiplier);
+        prefEditor.apply();
+    }
 }

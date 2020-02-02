@@ -22,6 +22,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+
+        SsSurvey survey = new SsSurvey("some-company.surveysparrow.com", "tt-b6a21f");
+        survey.addCustomParam("firstName", "Donfy").addCustomParam("lastName", "Antu");
+
+        SurveySparrow ss = new SurveySparrow(this, survey)
+                .setActivityTheme(R.style.AppTheme)
+                .setAppBarTitle("Rate us")
+                .enableBackButton(true);
+        ss.scheduleSurvey(44);
     }
 
     public void startSurvey(View v) {

@@ -52,7 +52,7 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
     }
 
     @Override
-    public void responseEvent(String data) {
+    public void onSsResponseEvent(String data) {
         Intent resultIntent = new Intent();
         resultIntent.setData(Uri.parse(data));
         setResult(RESULT_OK, resultIntent);

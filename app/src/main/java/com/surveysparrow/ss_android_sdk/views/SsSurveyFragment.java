@@ -1,6 +1,7 @@
 package com.surveysparrow.ss_android_sdk.views;
 
 
+import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -10,14 +11,16 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
-import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
-import android.webkit.WebResourceRequest;
+import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.ProgressBar;
 
 import com.surveysparrow.ss_android_sdk.SurveySparrow;
 import com.surveysparrow.ss_android_sdk.helpers.OnSsResponseEventListener;
@@ -29,6 +32,8 @@ import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 @SuppressLint("SetJavaScriptEnabled")
 public final class SsSurveyFragment extends Fragment {
     private SsSurvey survey;
+    private ProgressBar progressBar;
+    private ObjectAnimator progressBarAnimator;
 
     private OnSsResponseEventListener onSsResponseEventListener;
 
@@ -45,36 +50,55 @@ public final class SsSurveyFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        FrameLayout ssLayout = new FrameLayout(getActivity());
+
+        progressBar = new ProgressBar(getActivity(), null, android.R.attr.progressBarStyleHorizontal);
+        progressBar.setMax(100);
+        progressBar.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 6, Gravity.TOP));
+
         WebView ssWebView = new WebView(getActivity());
         ssWebView.getSettings().setJavaScriptEnabled(true);
         ssWebView.getSettings().setDomStorageEnabled(true);
-        ssWebView.addJavascriptInterface(new JsObject(getActivity()), "SsAndroidSdk");
-        ssWebView.setWebViewClient(new WebViewClient(){
+        ssWebView.addJavascriptInterface(new JsObject(), "SsAndroidSdk");
+
+        ssWebView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if(url.contains(SurveySparrow.SS_THANKYOU_BASE_URL)) {
-                    return false;
+                if (url.contains(SurveySparrow.SS_THANKYOU_BASE_URL)) {
+                    return super.shouldOverrideUrlLoading(view, url);
                 }
                 view.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
                 return true;
             }
         });
+
+        ssWebView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onProgressChanged(WebView view, int newProgress) {
+                super.onProgressChanged(view, newProgress);
+                if (newProgress == 100) {
+                    progressBar.setVisibility(View.GONE);
+                    return;
+                }
+                progressBarAnimator = ObjectAnimator.ofInt(progressBar, "progress", progressBar.getProgress(), newProgress);
+                progressBarAnimator.setDuration(300);
+                progressBarAnimator.start();
+            }
+        });
+
         ssWebView.loadUrl(this.survey.getSsUrl());
 //        ssWebView.loadUrl("https://react-7hjmqi.stackblitz.io");
-        return ssWebView;
+
+        ssLayout.addView(ssWebView);
+        ssLayout.addView(progressBar);
+        return ssLayout;
     }
 
 
     private class JsObject {
-        private Context context;
-
-        JsObject(Context context) {
-            this.context = context;
-        }
-
         @JavascriptInterface
         public void shareData(String data) {
-            onSsResponseEventListener.responseEvent(data);
+            onSsResponseEventListener.onSsResponseEvent(data);
         }
     }
 }

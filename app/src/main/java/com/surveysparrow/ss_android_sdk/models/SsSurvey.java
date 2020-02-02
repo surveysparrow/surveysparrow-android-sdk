@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 public final class SsSurvey implements Serializable {
     private String baseUrl;
+    private String surveyToken;
     private String customVariableString = "?";
 
     public static class CustomParam {
@@ -18,6 +19,7 @@ public final class SsSurvey implements Serializable {
 
     public SsSurvey(CharSequence domain, CharSequence surveyToken) {
         this.baseUrl = generateBaseUrl(domain, surveyToken);
+        this.surveyToken = surveyToken.toString();
     }
 
     public SsSurvey(CharSequence domain, CharSequence surveyToken, CustomParam[] customParams) {
@@ -27,6 +29,10 @@ public final class SsSurvey implements Serializable {
 
     public String getSsUrl() {
         return baseUrl + customVariableString;
+    }
+
+    public String getSurveyToken() {
+        return surveyToken;
     }
 
     public SsSurvey addCustomParam(CustomParam customParam) {

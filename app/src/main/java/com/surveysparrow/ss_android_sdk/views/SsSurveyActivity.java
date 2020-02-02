@@ -64,7 +64,6 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
                 finish();
             }
         }, waitTime);
-
     }
 
     @Override

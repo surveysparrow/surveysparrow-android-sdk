@@ -49,7 +49,10 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == SURVEY_REQUEST_CODE && resultCode == RESULT_OK) {
+            Log.v("EEE", "OK");
             Log.v("EEE", data.getData().toString());
+        } else {
+            Log.v("EEE", "Cancelled");
         }
     }
 }

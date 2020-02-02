@@ -9,6 +9,7 @@ import androidx.fragment.app.FragmentTransaction;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.MenuItem;
 
 import com.surveysparrow.ss_android_sdk.R;
@@ -17,44 +18,53 @@ import com.surveysparrow.ss_android_sdk.helpers.OnSsResponseEventListener;
 import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 
 public final class SsSurveyActivity extends AppCompatActivity implements OnSsResponseEventListener {
-    private boolean isSurveyComplete = false;
+    private SsSurvey survey;
+    private int activityTheme;
+    private CharSequence appbarTitle;
+    private boolean enableButton;
+    private long waitTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         Intent intent = getIntent();
-        setTheme(intent.getIntExtra(SurveySparrow.SS_ACTIVITY_THME, R.style.SurveyTheme));
+        activityTheme = intent.getIntExtra(SurveySparrow.SS_ACTIVITY_THME, R.style.SurveyTheme);
+        appbarTitle = intent.getStringExtra(SurveySparrow.SS_APPBAR_TITLE);
+        enableButton = intent.getBooleanExtra(SurveySparrow.SS_BACK_BUTTON, true);
+        waitTime = intent.getLongExtra(SurveySparrow.SS_WAIT_TIME, SurveySparrow.SS_DEFAULT_WAIT_TIME);
+        survey = (SsSurvey) intent.getSerializableExtra(SurveySparrow.SS_SURVEY);
+
+        setTheme(activityTheme);
         setContentView(R.layout.activity_ss_survey);
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
-            actionBar.setTitle(intent.getStringExtra(SurveySparrow.SS_APPBAR_TITLE));
-            actionBar.setDisplayHomeAsUpEnabled(intent.getBooleanExtra(SurveySparrow.SS_BACK_BUTTON, true));
+            actionBar.setTitle(appbarTitle);
+            actionBar.setDisplayHomeAsUpEnabled(enableButton);
         }
 
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 
-        SsSurveyFragment surveyFragment = new SsSurveyFragment((SsSurvey) intent.getSerializableExtra(SurveySparrow.SS_SURVEY));
+        SsSurveyFragment surveyFragment = new SsSurveyFragment(survey);
         fragmentTransaction.add(R.id.surveyContainer, surveyFragment);
         fragmentTransaction.commit();
     }
 
     @Override
     public void responseEvent(String data) {
-        this.isSurveyComplete = true;
         Intent resultIntent = new Intent();
         resultIntent.setData(Uri.parse(data));
         setResult(RESULT_OK, resultIntent);
-        finish();
-    }
 
-    @Override
-    protected void onDestroy() {
-        if (!this.isSurveyComplete) {
-            setResult(RESULT_CANCELED);
-        }
-        super.onDestroy();
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                finish();
+            }
+        }, waitTime);
+
     }
 
     @Override

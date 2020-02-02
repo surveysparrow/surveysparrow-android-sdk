@@ -6,13 +6,14 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.widget.Toast;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.StringRes;
 import androidx.annotation.StyleRes;
 
-import com.surveysparrow.ss_android_sdk.helpers.SsHelper;
 import com.surveysparrow.ss_android_sdk.models.SsSurvey;
 import com.surveysparrow.ss_android_sdk.views.SsSurveyActivity;
 
@@ -110,7 +111,7 @@ public final class SurveySparrow {
      *                    calling Activity to handle the response.
      */
     public void startSurveyForResult(int requestCode) {
-        if (!SsHelper.isNetworkConnected(context)) {
+        if (isNoNetwork()) {
             Toast.makeText(context, R.string.no_network_message, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -368,7 +369,7 @@ public final class SurveySparrow {
             return;
         }
 
-        if (!SsHelper.isNetworkConnected(context)) {
+        if (isNoNetwork()) {
             return;
         }
 
@@ -406,5 +407,12 @@ public final class SurveySparrow {
         prefEditor.putBoolean(SHARED_PREF_IS_TAKEN, _isAlreadyTaken);
         prefEditor.putInt(SHARED_PREF_INCREMENT, _incrementMultiplier);
         prefEditor.apply();
+    }
+
+    private boolean isNoNetwork() {
+        ConnectivityManager cm =
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
     }
 }

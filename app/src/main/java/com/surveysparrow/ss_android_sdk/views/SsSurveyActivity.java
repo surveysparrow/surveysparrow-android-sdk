@@ -29,7 +29,7 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
         super.onCreate(savedInstanceState);
 
         Intent intent = getIntent();
-        activityTheme = intent.getIntExtra(SurveySparrow.SS_ACTIVITY_THME, R.style.SurveyTheme);
+        activityTheme = intent.getIntExtra(SurveySparrow.SS_ACTIVITY_THEME, R.style.SurveyTheme);
         appbarTitle = intent.getStringExtra(SurveySparrow.SS_APPBAR_TITLE);
         enableButton = intent.getBooleanExtra(SurveySparrow.SS_BACK_BUTTON, true);
         waitTime = intent.getLongExtra(SurveySparrow.SS_WAIT_TIME, SurveySparrow.SS_DEFAULT_WAIT_TIME);

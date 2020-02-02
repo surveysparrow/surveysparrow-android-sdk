@@ -64,7 +64,7 @@ public final class SsSurveyFragment extends Fragment {
         ssWebView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if (url.contains(SurveySparrow.SS_THANKYOU_BASE_URL)) {
+                if (url.contains(SurveySparrow.SS_THANK_YOU_BASE_URL)) {
                     return super.shouldOverrideUrlLoading(view, url);
                 }
                 view.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));

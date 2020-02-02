@@ -67,12 +67,12 @@ public final class SurveySparrow {
     public static final int MULTIPLE_FEEDBACK = 2;
 
     public static final String SS_SURVEY = "SS_SURVEY";
-    public static final String SS_ACTIVITY_THME = "SS_ACTIVITY_THEME";
+    public static final String SS_ACTIVITY_THEME = "SS_ACTIVITY_THEME";
     public static final String SS_APPBAR_TITLE = "SS_APPBAR_TITLE";
     public static final String SS_BACK_BUTTON = "SS_BACK_BUTTON";
     public static final String SS_WAIT_TIME = "SS_WAIT_TIME";
     public static final long SS_DEFAULT_WAIT_TIME = 3000;
-    public static final String SS_THANKYOU_BASE_URL = "https://surveysparrow.com/thankyou";
+    public static final String SS_THANK_YOU_BASE_URL = "https://surveysparrow.com/thankyou";
 
     private static final String SHARED_PREF_FILE = "com.surveysparrow.android-sdk.SsSurveySharedPref";
     private static final String SHARED_PREF_IS_TAKEN = "IS_ALREADY_TAKEN";
@@ -117,7 +117,7 @@ public final class SurveySparrow {
 
         Intent intent = new Intent(context, SsSurveyActivity.class);
         intent.putExtra(SS_SURVEY, survey);
-        intent.putExtra(SS_ACTIVITY_THME, activityTheme);
+        intent.putExtra(SS_ACTIVITY_THEME, activityTheme);
         intent.putExtra(SS_APPBAR_TITLE, appBarTitle);
         intent.putExtra(SS_BACK_BUTTON, enableBackButton);
         intent.putExtra(SS_WAIT_TIME, waitTime);

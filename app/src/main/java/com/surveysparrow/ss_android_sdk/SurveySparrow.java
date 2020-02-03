@@ -399,6 +399,16 @@ public final class SurveySparrow {
         }
     }
 
+    /**
+     * Clear scheduled survey.
+     */
+    public void clearSchedule() {
+        _promptTime = -1;
+        _isAlreadyTaken = false;
+        _incrementMultiplier = 1;
+        storeToPref();
+    }
+
     private void fetchFromPref() {
         SharedPreferences sharedPreferences = context.getSharedPreferences(schedulePrefFileName, Context.MODE_PRIVATE);
         _isAlreadyTaken = sharedPreferences.getBoolean(SHARED_PREF_IS_TAKEN, false);

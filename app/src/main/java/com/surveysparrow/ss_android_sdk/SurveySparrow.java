@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.IntDef;
@@ -363,10 +362,6 @@ public final class SurveySparrow {
     public void scheduleSurvey(final int requestCode) {
         fetchFromPref();
         final long now = new Date().getTime();
-
-        Log.v("EEE", _isAlreadyTaken + "");
-        Log.v("EEE", now + "");
-        Log.v("EEE", _promptTime + "");
 
         if (_promptTime == -1) {
             _promptTime = now + startAfter;

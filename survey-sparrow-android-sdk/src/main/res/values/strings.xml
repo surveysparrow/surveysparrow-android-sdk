@@ -1,6 +1,4 @@
 <resources>
-    <string name="app_name">ss-android-sdk</string>
-
     <string name="ss_activity_title">Feedback</string>
     <string name="no_network_message">No Network!</string>
     <string name="dialog_title">Rate us</string>

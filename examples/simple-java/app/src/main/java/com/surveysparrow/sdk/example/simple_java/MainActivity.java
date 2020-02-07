@@ -27,13 +27,13 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     /**
      * Domain of your SurveySparrow account.
      */
-    public static final String SS_DOMAIN = "Add_your_domain_here";
+    public static final String SS_DOMAIN = "82644538.ngrok.io";
 
     /**
      * Mobile SDK token of your survey.
      * You can generate a Mobile SDK token in your survey's share page.
      */
-    public static final String SS_TOKEN = "Add_your_survey_token_here";
+    public static final String SS_TOKEN = "tt-b038bf";
 
     SsSurvey survey;
     SurveySparrow surveySparrow;

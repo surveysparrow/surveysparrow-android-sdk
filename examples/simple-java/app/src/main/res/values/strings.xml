@@ -3,4 +3,6 @@
 
     <string name="btn_start_activity">Start Survey Activity</string>
     <string name="btn_start_fragment">Show Survey Fragment</string>
+
+    <string name="resultError"></string>
 </resources>

@@ -1,2 +1,2 @@
-include ':app'
+include ':app', ':survey-sparrow-android-sdk'
 rootProject.name='SS Simple'

@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.surveysparrow.sdk.example.simple_java">
 
+    <!-- Permissions required for survey-sparrow-android-sdk -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Permissions required for survey-sparrow-android-sdk -->
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"

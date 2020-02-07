@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.IntDef;
@@ -140,6 +139,12 @@ public final class SurveySparrow {
         debugMode = enable;
     }
 
+    /**
+     * Convert String to JSONObject
+     *
+     * @param text JSON String
+     * @return Returns the JSONObject
+     */
     public static JSONObject toJSON(String text) {
         JSONObject json;
         try {

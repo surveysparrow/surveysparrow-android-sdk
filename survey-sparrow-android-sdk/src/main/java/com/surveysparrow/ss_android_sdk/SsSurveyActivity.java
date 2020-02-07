@@ -12,6 +12,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.view.MenuItem;
 
+import org.json.JSONObject;
+
 public final class SsSurveyActivity extends AppCompatActivity implements OnSsResponseEventListener {
     private SsSurvey survey;
     private int activityTheme;
@@ -47,9 +49,9 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
     }
 
     @Override
-    public void onSsResponseEvent(String data) {
+    public void onSsResponseEvent(JSONObject data) {
         Intent resultIntent = new Intent();
-        resultIntent.setData(Uri.parse(data));
+        resultIntent.setData(Uri.parse(data.toString()));
         setResult(RESULT_OK, resultIntent);
 
         SurveySparrow.setAlreadyTaken(this, survey.getSurveyToken());

@@ -8,11 +8,15 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.StringRes;
 import androidx.annotation.StyleRes;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -134,6 +138,16 @@ public final class SurveySparrow {
      */
     public static void enableDebugMode(boolean enable) {
         debugMode = enable;
+    }
+
+    public static JSONObject toJSON(String text) {
+        JSONObject json;
+        try {
+            json = new JSONObject(text);
+        } catch (JSONException e) {
+            return null;
+        }
+        return json;
     }
 
     /**

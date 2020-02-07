@@ -1,5 +1,7 @@
 package com.surveysparrow.ss_android_sdk;
 
+import org.json.JSONObject;
+
 /**
  * Implement OnSsResponseEventListener in your Activity to listen for survey response event.
  *
@@ -10,5 +12,5 @@ public interface OnSsResponseEventListener {
      * @param data Survey response.
      * @see SsSurveyFragment
      */
-    public void onSsResponseEvent(String data);
+    public void onSsResponseEvent(JSONObject data);
 }

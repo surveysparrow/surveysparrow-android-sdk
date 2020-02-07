@@ -24,6 +24,8 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 
+import org.json.JSONObject;
+
 /**
  * Fragment that display the Survey Sparrow survey.
  * Use this fragment to display survey in your activity.
@@ -99,7 +101,6 @@ public final class SsSurveyFragment extends Fragment {
         });
 
         ssWebView.loadUrl(this.survey.getSsUrl());
-//        ssWebView.loadUrl("https://react-7hjmqi.stackblitz.io");
 
         ssLayout.addView(ssWebView);
         ssLayout.addView(progressBar);
@@ -110,7 +111,7 @@ public final class SsSurveyFragment extends Fragment {
     private class JsObject {
         @JavascriptInterface
         public void shareData(String data) {
-            onSsResponseEventListener.onSsResponseEvent(data);
+            onSsResponseEventListener.onSsResponseEvent(SurveySparrow.toJSON(data));
         }
     }
 }

@@ -15,7 +15,6 @@ import com.surveysparrow.ss_android_sdk.SsSurvey;
 import com.surveysparrow.ss_android_sdk.SsSurveyFragment;
 import com.surveysparrow.ss_android_sdk.SurveySparrow;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.concurrent.TimeUnit;
@@ -25,8 +24,16 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     public static final int SURVEY_SCHEDULE_REQUEST_CODE = 2;
     public static final String LOG_TAG = "SS_SAMPLE";
 
-    public static final String SS_DOMAIN = "Add your domain here";
-    public static final String SS_TOKEN = "Add your survey token here";
+    /**
+     * Domain of your SurveySparrow account.
+     */
+    public static final String SS_DOMAIN = "Add_your_domain_here";
+
+    /**
+     * Mobile SDK token of your survey.
+     * You can generate a Mobile SDK token in your survey's share page.
+     */
+    public static final String SS_TOKEN = "Add_your_survey_token_here";
 
     SsSurvey survey;
     SurveySparrow surveySparrow;
@@ -36,13 +43,17 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Create a SsSurvey object with your domain & survey token.
         survey = new SsSurvey(SS_DOMAIN, SS_TOKEN);
+
+        // You only need SurveySparrow object if you want to open the survey in an Activity or schedule it.
         surveySparrow = new SurveySparrow(this, survey)
                 .setActivityTheme(R.style.AppTheme)
                 .setAppBarTitle(R.string.app_name)
                 .enableBackButton(true)
                 .setWaitTime(2000)
 
+                // Only for scheduling
                 .setStartAfter(TimeUnit.DAYS.toMillis(3L))
                 .setRepeatInterval(TimeUnit.DAYS.toMillis(5L))
                 .setRepeatType(SurveySparrow.REPEAT_TYPE_CONSTANT)
@@ -56,9 +67,11 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     }
 
     public void showSurveyFragment(View v) {
+        SsSurveyFragment surveyFragment = new SsSurveyFragment(survey);
+
+        // Add the SsSurveyFragment to the Activity.
         FragmentManager fragmentManager = this.getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        SsSurveyFragment surveyFragment = new SsSurveyFragment(survey);
         fragmentTransaction.add(R.id.surveyContainer, surveyFragment);
         fragmentTransaction.commit();
     }
@@ -68,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == SURVEY_REQUEST_CODE) {
             if (resultCode == RESULT_OK) {
-                JSONObject responses = convertToJSON(data.getData().toString());
+                JSONObject responses = SurveySparrow.toJSON(data.getData().toString());
                 Log.v(LOG_TAG, responses.toString());
             } else {
                 Log.v(LOG_TAG, "No Response");
@@ -76,19 +89,8 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
         }
     }
 
-    private JSONObject convertToJSON(String jsonString) {
-        JSONObject json;
-        try {
-            json = new JSONObject(jsonString);
-        } catch (JSONException e) {
-            Log.v(LOG_TAG, "JSON parse error");
-            return null;
-        }
-        return json;
-    }
-
     @Override
-    public void onSsResponseEvent(String s) {
-        Log.v(LOG_TAG, s);
+    public void onSsResponseEvent(JSONObject s) {
+        Log.v(LOG_TAG, s.toString());
     }
 }

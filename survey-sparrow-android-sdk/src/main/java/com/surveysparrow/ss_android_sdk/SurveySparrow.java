@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.IntDef;
@@ -50,7 +51,7 @@ public final class SurveySparrow {
     private int _incrementMultiplier;
 
     /**
-     * Repeat survey with a constant interval;
+     * Repeat survey with a constant interval
      */
     public static final int REPEAT_TYPE_CONSTANT = 1;
 
@@ -70,13 +71,18 @@ public final class SurveySparrow {
      */
     public static final int MULTIPLE_FEEDBACK = 2;
 
-    public static final String SS_SURVEY = "SS_SURVEY";
-    public static final String SS_ACTIVITY_THEME = "SS_ACTIVITY_THEME";
-    public static final String SS_APPBAR_TITLE = "SS_APPBAR_TITLE";
-    public static final String SS_BACK_BUTTON = "SS_BACK_BUTTON";
-    public static final String SS_WAIT_TIME = "SS_WAIT_TIME";
-    public static final long SS_DEFAULT_WAIT_TIME = 3000;
-    public static final String SS_THANK_YOU_BASE_URL = "https://surveysparrow.com/thankyou";
+    /**
+     * Debug log tag.
+     */
+    public static final String SS_DEBUG_LOG = "SS_DEBUG_LOG";
+
+    static final String SS_SURVEY = "SS_SURVEY";
+    static final String SS_ACTIVITY_THEME = "SS_ACTIVITY_THEME";
+    static final String SS_APPBAR_TITLE = "SS_APPBAR_TITLE";
+    static final String SS_BACK_BUTTON = "SS_BACK_BUTTON";
+    static final String SS_WAIT_TIME = "SS_WAIT_TIME";
+    static final long SS_DEFAULT_WAIT_TIME = 3000;
+    static final String SS_THANK_YOU_BASE_URL = "https://surveysparrow.com/thankyou";
 
     private static final String SHARED_PREF_FILE = "com.surveysparrow.android-sdk.SsSurveySharedPref";
     private static final String SHARED_PREF_IS_TAKEN = "IS_ALREADY_TAKEN";
@@ -150,6 +156,8 @@ public final class SurveySparrow {
         try {
             json = new JSONObject(text);
         } catch (JSONException e) {
+            if(debugMode)
+                Log.e(SS_DEBUG_LOG, e.getStackTrace().toString());
             return null;
         }
         return json;
@@ -252,7 +260,7 @@ public final class SurveySparrow {
     }
 
     /**
-     * Set schedule alert dialog message
+     * Set schedule alert dialog message.
      *
      * @param messageId Resource ID of message string to set.
      * @return Returns the same SurveySparrow object, for chaining
@@ -358,7 +366,7 @@ public final class SurveySparrow {
     }
 
     /**
-     * Set schedule repeat type.
+     * Set schedule feedback type.
      *
      * @param feedbackType One of SINGLE_FEEDBACK or MULTIPLE_FEEDBACK
      * @return Returns the same SurveySparrow object, for chaining

@@ -9,6 +9,7 @@ import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
+import android.webkit.WebView;
 import android.widget.Toast;
 
 import androidx.annotation.IntDef;
@@ -424,11 +425,12 @@ public final class SurveySparrow {
     /**
      * Clear scheduled survey.
      */
-    public void clearSchedule() {
+    public SurveySparrow clearSchedule() {
         _promptTime = -1;
         _isAlreadyTaken = false;
         _incrementMultiplier = 1;
         storeToPref();
+        return this;
     }
 
     private void fetchFromPref() {

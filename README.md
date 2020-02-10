@@ -196,7 +196,6 @@ Constructor - `CustomParam(CharSequence name, CharSequence value)`
 |`SurveySparrow`|`setRepeatType(@RepeatType int repeatType)`: Set schedule repeat type.|
 |`SurveySparrow`|`setFeedbackType(@FeedbackType int feedbackType)`: Set schedule feedback type.|
 |`SurveySparrow`|`scheduleSurvey(final int requestCode)`: Schedule a take survey dialog to show after opening the activity for first time, it will show again after the repeat interval if denied, even if the user accept to take the survey you can show the dialog again by setting feedback type to MULTIPLE_FEEDBACK.|
-|`SurveySparrow`|`preLoad()`: Download the survey in advance for faster loading.|
 |`SurveySparrow`|`clearSchedule()`: Clear scheduled survey.|
 |`void`|`enableDebugMode(boolean enable)`: Enable debug mode to view useful log messages while development. (Use only while development).|
 

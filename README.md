@@ -137,7 +137,7 @@ We will show a customized prompt to take a feedback survey whenever the `schedul
 **You can only create one schedule per token. Create multiple tokens if you want to create multiple schedules for same survey.*
 
 ## Reference
-### `SsSurvey`
+### SsSurvey
 #### Nested classes
 `CustomParam` : To hold custom params.
 
@@ -156,7 +156,7 @@ Constructor - `CustomParam(CharSequence name, CharSequence value)`
 |`SsSurvey`|`addCustomParam(CharSequence name, CharSequence value)`: add custom param by passing name & value.
 
 
-### `SurveySparrow`
+### SurveySparrow
 #### Public constants
 |Type|Constant|
 |-----------|------|
@@ -200,7 +200,7 @@ Constructor - `CustomParam(CharSequence name, CharSequence value)`
 |`void`|`enableDebugMode(boolean enable)`: Enable debug mode to view useful log messages while development. (Use only while development).|
 
 
-### `OnSsResponseEventListener`
+### OnSsResponseEventListener
 Implement `OnSsResponseEventListener` in your Activity to listen for survey response event.
 
 #### Public methods

@@ -5,7 +5,7 @@ Our Android SDK enables the full Survey Sparrow feedback experience on you mobil
 > Mobile SDK share channel is only available from Survey Sparrow **Premium** plan onwards.
 
 ## Features
-1. [Fully customizable pre-build `Activity` to take feedback whenever & wherever you want.](#Take-feedback-using-`Activity`)
+1. [Fully customizable pre-build `Activity` to take feedback whenever & wherever you want.](#Take-feedback-using-Activity)
 2. [`Fragment` to integrate the feedback experience anywhere in your app.](#Embed-survey-in-your-Activity)
 3. [Schedule Surveys to take one-time or recurring feedbacks.](#Schedule-Surveys)
 
@@ -23,7 +23,7 @@ The SDK need Internet access to fetch survey & submit answers. Add the following
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 ```
 
-### Take feedback using `Activity`
+### Take feedback using Activity
 Take feedback using our pre-build `Activity` and get the response after submission by overriding the calling `Activity`'s `onActivityResult` method.
 
 #### Create a [`SsSurvey`](#SsSurvey) Object

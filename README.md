@@ -1,8 +1,8 @@
 # Survey Sparrow Android SDK
 
-Our Android SDK enables the full Survey Sparrow feedback experience on you mobile app. Embed our Classic & Chat surveys in your Android application seamlessly with few lines of code.
+SurveySparrow Android SDK enables you to collect the feedback from your mobile app. Embed the Classic & Chat surveys in your Android application seamlessly with few lines of code.
 
-> Mobile SDK share channel is only available from Survey Sparrow **Premium** plan onwards.
+> Mobile SDK share channel is only available from SurveySparrow **Premium** plan onwards.
 
 ## Features
 1. [Fully customizable pre-build `Activity` to take feedback whenever & wherever you want.](#Take-feedback-using-Activity)

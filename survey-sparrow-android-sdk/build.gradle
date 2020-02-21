@@ -1,4 +1,7 @@
+apply plugin: 'com.novoda.bintray-release'
 apply plugin: 'com.android.library'
+
+def stringVersionName = '0.1.0'
 
 android {
     compileSdkVersion 29
@@ -7,7 +10,7 @@ android {
         minSdkVersion 14
         targetSdkVersion 29
         versionCode 1
-        versionName "1.0"
+        versionName stringVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -16,6 +19,16 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+publish {
+    userOrg = 'surveysparrow'
+    repoName = 'maven'
+    groupId = 'com.surveysparrow'
+    artifactId = 'ss-android-sdk'
+    publishVersion = stringVersionName
+    desc = 'SurveySparrow Android SDK'
+    website = 'https://github.com/surveysparrow/surveysparrow-android-sdk'
 }
 
 dependencies {

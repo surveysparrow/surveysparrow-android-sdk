@@ -13,8 +13,7 @@ SurveySparrow Android SDK enables you to collect the feedback from your mobile a
 
 Add the following line to your **app modules** `build.gradle` file inside `dependencies`
 ```gradle
-implementation 'com.surveysparrow'
-// TODO: Update the implementation name after publishing the SDK
+implementation 'com.surveysparrow:ss-android-sdk:0.1.0'
 ```
 
 The SDK need Internet access to fetch survey & submit answers. Add the following permissions to `AndroidManifest.xml` file

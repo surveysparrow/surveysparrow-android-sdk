@@ -21,7 +21,7 @@ class PlaybackActivity : AppCompatActivity() {
 
     fun rateMovie(view: View) {
         // Create a survey
-        val survey = SsSurvey("06e680f3.ngrok.io", "tt-9dbe21")
+        val survey = SsSurvey("your_domain", "your_survey_token")
             .addCustomParam("movieName", "Sparrow Life") // Pass data to the survey from your code
 
         // Create SurveySparrow to set configs and trigger survey.

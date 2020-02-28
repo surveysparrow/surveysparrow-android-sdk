@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".RecommendationsActivity">
+
+    <TextView
+        android:textColor="@color/colorPrimaryText"
+        android:id="@+id/textView"
+        android:textSize="@dimen/recommendation_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/recommendation_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <View
+            android:background="#FFAAAA"
+            android:layout_width="@dimen/recommendation_tile_width"
+            android:layout_height="@dimen/recommendation_tile_height" />
+
+        <View
+            android:layout_marginLeft="50dp"
+            android:background="#FFFFBB"
+            android:layout_width="@dimen/recommendation_tile_width"
+            android:layout_height="@dimen/recommendation_tile_height" />
+
+        <View
+            android:layout_marginLeft="50dp"
+            android:background="#BBFFBB"
+            android:layout_width="@dimen/recommendation_tile_width"
+            android:layout_height="@dimen/recommendation_tile_height" />
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

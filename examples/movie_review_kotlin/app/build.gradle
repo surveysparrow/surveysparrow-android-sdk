@@ -9,7 +9,7 @@ android {
     buildToolsVersion "29.0.2"
     defaultConfig {
         applicationId "com.surveysparrow.sdk.example.movie_review_kotlin"
-        minSdkVersion 14
+        minSdkVersion 21
         targetSdkVersion 29
         versionCode 1
         versionName "1.0"
@@ -34,5 +34,5 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
 
     // SurveySparrow SDK
-    implementation 'com.surveysparrow:ss-android-sdk:0.1.0'
+    implementation 'com.surveysparrow:ss-android-sdk:0.1.1'
 }

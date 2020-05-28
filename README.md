@@ -9,7 +9,7 @@ SurveySparrow Android SDK enables you to collect the feedback from your mobile a
 2. [`Fragment` to integrate the feedback experience anywhere in your app.](#Embed-survey-in-your-Activity)
 3. [Schedule Surveys to take one-time or recurring feedbacks.](#Schedule-Surveys)
 
-## SDK integration
+## SDK integration (Require API level 21)
 
 Add the following line to your **app modules** `build.gradle` file inside `dependencies`
 ```gradle

@@ -64,7 +64,6 @@ public final class SsSurveyFragment extends Fragment {
         progressBar.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 6, Gravity.TOP));
 
         WebView ssWebView = new WebView(getActivity());
-        ssWebView.clearCache(true);
         ssWebView.getSettings().setJavaScriptEnabled(true);
         ssWebView.getSettings().setDomStorageEnabled(true);
         ssWebView.addJavascriptInterface(new JsObject(), "SsAndroidSdk");
@@ -75,7 +74,7 @@ public final class SsSurveyFragment extends Fragment {
                 if (url.contains(SurveySparrow.SS_THANK_YOU_BASE_URL)) {
                     return super.shouldOverrideUrlLoading(view, url);
                 }
-                view.getContext().getApplicationContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                view.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
                 return true;
             }
 

@@ -9,7 +9,6 @@ import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
-import android.webkit.WebView;
 import android.widget.Toast;
 
 import androidx.annotation.IntDef;

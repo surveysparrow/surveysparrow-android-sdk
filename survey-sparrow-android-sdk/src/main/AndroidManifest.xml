@@ -9,6 +9,7 @@
         android:allowBackup="true"
         android:supportsRtl="true">
         <activity
+            android:exported="true"
             android:name=".SsSurveyActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
     </application>

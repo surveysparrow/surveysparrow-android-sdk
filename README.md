@@ -25,7 +25,7 @@ The SDK need Internet access to fetch survey & submit answers. Add the following
 ### Take feedback using Activity
 Take feedback using our pre-build `Activity` and get the response after submission by overriding the calling `Activity`'s `onActivityResult` method.
 
-![SurveySparrow Android SDK full-screen view](examples/screenshots/fullscreen.png?raw=true =250x)
+<img width="340" alt="SurveySparrow Android SDK full-screen view" src="https://user-images.githubusercontent.com/61273614/85107768-235faf80-b22c-11ea-85e2-1f043c47258e.png">
 
 #### Create a [`SsSurvey`](#SsSurvey) Object
 Create SDK token by from the share page of your survey in the SurveySparrow web app and use that token to create the `SsSurvey` Object.
@@ -70,7 +70,7 @@ protected void onActivityResult(int requestCode, int resultCode, @Nullable
 ### Embed survey in your Activity
 Embed the feedback experience to your `Activity` using the [`SsSurveyFragment`](#SsSurveyFragment). Then you can implement the `OnSsResponseEventListener` interface to handle response after submission.
 
-![SurveySparrow Android SDK embed view](examples/screenshots/embed.png?raw=true =250x)
+<img width="340" alt="SurveySparrow Android SDK embed view" src="https://user-images.githubusercontent.com/61273614/85107978-7b96b180-b22c-11ea-9e7e-381ff94992d8.png">
 
 #### Create [`SsSurvey`](#SsSurvey) object
 ```java
@@ -103,7 +103,8 @@ public class YourActivity extends AppCompatActivity implements OnSsResponseEvent
 
 ### Schedule Surveys
 Ask the user to take a feedback survey when they open your app/Activity/page after a period of time.
-![SurveySparrow Android SDK scheduling](examples/screenshots/schedule.png?raw=true =250x)
+
+<img width="340" alt="SurveySparrow Android SDK scheduling" src="https://user-images.githubusercontent.com/61273614/85107837-3bcfca00-b22c-11ea-91ac-94b685eefd70.png">
 
 #### Create [`SsSurvey`](#SsSurvey) object
 ```java

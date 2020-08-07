@@ -1,11 +1,16 @@
 package com.surveysparrow.ss_android_sdk;
 
+import android.net.Uri;
+
+import androidx.annotation.IntDef;
+
 import java.io.Serializable;
 
 public final class SsSurvey implements Serializable {
     private String baseUrl;
     private String surveyToken;
     private String customVariableString = "?";
+    private int surveyType = SurveySparrow.CLASSIC;
 
     /**
      * Custom param class
@@ -17,7 +22,7 @@ public final class SsSurvey implements Serializable {
         /**
          * Create custom param.
          *
-         * @param name Custom param name.
+         * @param name  Custom param name.
          * @param value Custom param value.
          */
         public CustomParam(CharSequence name, CharSequence value) {
@@ -29,7 +34,7 @@ public final class SsSurvey implements Serializable {
     /**
      * Create SsSurvey.
      *
-     * @param domain Domain name.
+     * @param domain      Domain name.
      * @param surveyToken Survey token.
      */
     public SsSurvey(CharSequence domain, CharSequence surveyToken) {
@@ -40,8 +45,8 @@ public final class SsSurvey implements Serializable {
     /**
      * Create SsSurvey with custom params
      *
-     * @param domain Domain name.
-     * @param surveyToken Survey Token.
+     * @param domain       Domain name.
+     * @param surveyToken  Survey Token.
      * @param customParams CustomParams Array.
      * @see CustomParam
      */
@@ -62,7 +67,7 @@ public final class SsSurvey implements Serializable {
      * Add custom param to survey.
      *
      * @param customParam CustomParam object
-     * @return Returns the same SurveySparrow object, for chaining
+     * @return Returns the same SsSurvey object, for chaining
      * multiple calls into a single statement.
      * @see CustomParam
      */
@@ -74,12 +79,12 @@ public final class SsSurvey implements Serializable {
     /**
      * Add custom params by name & value
      *
-     * @param name Custom param name
+     * @param name  Custom param name
      * @param value Custom param value
-     * @return Returns the same SurveySparrow object, for chaining
+     * @return Returns the same SsSurvey object, for chaining
      * multiple calls into a single statement.
      */
-    public  SsSurvey addCustomParam(CharSequence name, CharSequence value) {
+    public SsSurvey addCustomParam(CharSequence name, CharSequence value) {
         customVariableString += name + "=" + value + "&";
         return this;
     }
@@ -88,7 +93,7 @@ public final class SsSurvey implements Serializable {
      * Add multiple custom params at once.
      *
      * @param customParams CustomParam object array
-     * @return Returns the same SurveySparrow object, for chaining
+     * @return Returns the same SsSurvey object, for chaining
      * multiple calls into a single statement.
      * @see CustomParam
      */
@@ -99,7 +104,23 @@ public final class SsSurvey implements Serializable {
         return this;
     }
 
+    @IntDef({SurveySparrow.CLASSIC, SurveySparrow.CHAT, SurveySparrow.NPS})
+    private @interface SurveyType {
+    }
+
+    /**
+     * Set type of the survey.
+     *
+     * @param surveyType Survey Type
+     * @return Returns the same SsSurvey object, for chaining
+     * multiple calls into a single statement.
+     */
+    public SsSurvey setSurveyType(@SurveyType int surveyType) {
+        this.surveyType = surveyType;
+        return this;
+    }
+
     private String generateBaseUrl(CharSequence domain, CharSequence surveyToken) {
-        return "https://" + domain + "/s/android/" + surveyToken;
+        return "https://" + domain + "/" + (surveyType == SurveySparrow.NPS ? 'n' : 's') + "/android/" + surveyToken;
     }
 }

@@ -72,6 +72,13 @@ public final class SurveySparrow {
     public static final int MULTIPLE_FEEDBACK = 2;
 
     /**
+     * Survey Types
+     */
+    public static final int CLASSIC = 1;
+    public static final int CHAT = 2;
+    public static final int NPS = 3;
+
+    /**
      * Debug log tag.
      */
     public static final String SS_DEBUG_LOG = "SS_DEBUG_LOG";
@@ -156,7 +163,7 @@ public final class SurveySparrow {
         try {
             json = new JSONObject(text);
         } catch (JSONException e) {
-            if(debugMode)
+            if (debugMode)
                 Log.e(SS_DEBUG_LOG, e.getStackTrace().toString());
             return null;
         }

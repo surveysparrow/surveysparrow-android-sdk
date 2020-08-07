@@ -1,6 +1,6 @@
 # Survey Sparrow Android SDK
 
-SurveySparrow Android SDK enables you to collect feedback from your mobile app. Embed the Classic & Chat surveys in your Android application seamlessly with few lines of code.
+[SurveySparrow](https:://surveysparrow.com) Android SDK enables you to collect feedback from your mobile app. Embed the Classic, Chat & NPS surveys in your Android application seamlessly with few lines of code.
 
 > Mobile SDK share channel is only available from SurveySparrow **Premium** plan onwards.
 
@@ -13,7 +13,7 @@ SurveySparrow Android SDK enables you to collect feedback from your mobile app. 
 
 Add the following line to your **app modules** `build.gradle` file inside `dependencies`
 ```gradle
-implementation 'com.surveysparrow:ss-android-sdk:0.1.3'
+implementation 'com.surveysparrow:ss-android-sdk:0.2.0'
 ```
 
 The SDK need Internet access to fetch survey & submit answers. Add the following permissions to `AndroidManifest.xml` file
@@ -141,6 +141,9 @@ We will show a customized prompt to take a feedback survey whenever the `schedul
 
 **You can only create one schedule per token. Create multiple tokens if you want to create multiple schedules for same survey.*
 
+### NPS Survey
+Survey type can be changed to NPS using `setSurveyType(SurveySparrow.NPS)` on an `SsSurvey` instance. You can also pass email as a custom param.
+
 ## Reference
 ### SsSurvey
 #### Nested classes
@@ -159,6 +162,7 @@ Constructor - `CustomParam(CharSequence name, CharSequence value)`
 |`SsSurvey`|`addCustomParam(CustomParam customParam)`: add custom param by passing a `SsSurvey.CustomParam` object.|
 |`SsSurvey`|`addCustomParams(CustomParam[] customParams)`: add custom params by passing `SsSurvey.CustomParam` object array.
 |`SsSurvey`|`addCustomParam(CharSequence name, CharSequence value)`: add custom param by passing name & value.
+|`SsSurvey`|`setSurveyType(@SurveyType int surveyType)`: set survey type to CLASSIC/CHAT/NPS
 
 
 ### SurveySparrow
@@ -169,6 +173,9 @@ Constructor - `CustomParam(CharSequence name, CharSequence value)`
 |`int`|`REPEAT_TYPE_INCREMENTAL`: Repeat survey with a incremental interval.|
 |`int`|`SINGLE_FEEDBACK`: Collect schedule feedback for once.|
 |`int`|`MULTIPLE_FEEDBACK`: Collect scheduled feedback multiple times. (Make sure that you have enabled 'Allow multiple submissions per user' for this survey)|
+|`int`|`CLASSIC`: Classic survey type|
+|`int`|`CHAT`: Chat survey type|
+|`int`|`NPS`: NPS survey type|
 |`String`|`SS_DEBUG_LOG`: Debug log tag.|
 
 #### Public constructors

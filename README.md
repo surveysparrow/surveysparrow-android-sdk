@@ -163,6 +163,7 @@ Constructor - `CustomParam(CharSequence name, CharSequence value)`
 |`SsSurvey`|`addCustomParams(CustomParam[] customParams)`: add custom params by passing `SsSurvey.CustomParam` object array.
 |`SsSurvey`|`addCustomParam(CharSequence name, CharSequence value)`: add custom param by passing name & value.
 |`SsSurvey`|`setSurveyType(@SurveyType int surveyType)`: set survey type to CLASSIC/CHAT/NPS
+|`SsSurvey`|`setThankYouRedirect(boolean thankyouRedirect)`: toggle redirect to thank you page outside the webview
 
 
 ### SurveySparrow

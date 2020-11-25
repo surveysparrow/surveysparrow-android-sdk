@@ -11,6 +11,7 @@ public final class SsSurvey implements Serializable {
     private String surveyToken;
     private String customVariableString = "?";
     private int surveyType = SurveySparrow.CLASSIC;
+    private boolean isThankYouRedirect = true;
 
     /**
      * Custom param class
@@ -61,6 +62,10 @@ public final class SsSurvey implements Serializable {
 
     String getSurveyToken() {
         return surveyToken;
+    }
+
+    boolean getThankYouRedirect() {
+        return isThankYouRedirect;
     }
 
     /**
@@ -122,5 +127,17 @@ public final class SsSurvey implements Serializable {
 
     private String generateBaseUrl(CharSequence domain, CharSequence surveyToken) {
         return "https://" + domain + "/" + (surveyType == SurveySparrow.NPS ? 'n' : 's') + "/android/" + surveyToken;
+    }
+
+    /**
+     * Whether to redirect to thank you page outside the webview
+     *
+     * @param thankYouRedirect Boolean to toggle the redirect behaviour
+     * @return Returns the same SsSurvey object, for chaining
+     * multiple calls into a single statement.
+     */
+    public SsSurvey setThankYouRedirect(boolean thankYouRedirect) {
+        isThankYouRedirect = thankYouRedirect;
+        return this;
     }
 }

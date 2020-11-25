@@ -69,11 +69,12 @@ public final class SsSurveyFragment extends Fragment {
         ssWebView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if (url.contains(SurveySparrow.SS_THANK_YOU_BASE_URL)) {
+                if (url.contains(SurveySparrow.SS_THANK_YOU_BASE_URL) || survey.getThankYouRedirect() == false) {
                     return super.shouldOverrideUrlLoading(view, url);
+                } else {
+                    view.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                    return true;
                 }
-                view.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-                return true;
             }
         });
 

@@ -21,7 +21,7 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
     private CharSequence appbarTitle;
     private boolean enableButton;
     private long waitTime;
-    public static final String SS_RUNTIME_EXCEPTION_LOG = "SS_RUNTIME_EXCEPTION_LOG";
+    public static final String SS_RUNTIME_EX_LOG = "SS_RUNTIME_EXCEPTION_LOG";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,7 +51,7 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
             fragmentTransaction.add(R.id.surveyContainer, surveyFragment);
             fragmentTransaction.commit();
         } catch (Exception e) {
-            Log.e(SS_RUNTIME_EXCEPTION_LOG, e.getStackTrace().toString());
+            Log.e(SS_RUNTIME_EX_LOG, e.getStackTrace().toString());
         }
     }
 

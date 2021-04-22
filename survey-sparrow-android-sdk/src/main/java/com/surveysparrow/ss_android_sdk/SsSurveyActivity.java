@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.MenuItem;
+import android.util.Log;
 
 import org.json.JSONObject;
 
@@ -20,32 +21,38 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
     private CharSequence appbarTitle;
     private boolean enableButton;
     private long waitTime;
+    public static final String SS_RT_EXCEPTION_LOG = "SS_RT_EXCEPTION_LOG";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        Intent intent = getIntent();
-        activityTheme = intent.getIntExtra(SurveySparrow.SS_ACTIVITY_THEME, R.style.SurveyTheme);
-        appbarTitle = intent.getStringExtra(SurveySparrow.SS_APPBAR_TITLE);
-        enableButton = intent.getBooleanExtra(SurveySparrow.SS_BACK_BUTTON, true);
-        waitTime = intent.getLongExtra(SurveySparrow.SS_WAIT_TIME, SurveySparrow.SS_DEFAULT_WAIT_TIME);
-        survey = (SsSurvey) intent.getSerializableExtra(SurveySparrow.SS_SURVEY);
-
-        setTheme(activityTheme);
-        setContentView(R.layout.activity_ss_survey);
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.setTitle(appbarTitle);
-            actionBar.setDisplayHomeAsUpEnabled(enableButton);
+        try {
+            super.onCreate(savedInstanceState);
+    
+            Intent intent = getIntent();
+            activityTheme = intent.getIntExtra(SurveySparrow.SS_ACTIVITY_THEME, R.style.SurveyTheme);
+            appbarTitle = intent.getStringExtra(SurveySparrow.SS_APPBAR_TITLE);
+            enableButton = intent.getBooleanExtra(SurveySparrow.SS_BACK_BUTTON, true);
+            waitTime = intent.getLongExtra(SurveySparrow.SS_WAIT_TIME, SurveySparrow.SS_DEFAULT_WAIT_TIME);
+            survey = (SsSurvey) intent.getSerializableExtra(SurveySparrow.SS_SURVEY);
+    
+            setTheme(activityTheme);
+            setContentView(R.layout.activity_ss_survey);
+            ActionBar actionBar = getSupportActionBar();
+            if (actionBar != null) {
+                actionBar.setTitle(appbarTitle);
+                actionBar.setDisplayHomeAsUpEnabled(enableButton);
+            }
+    
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+    
+            SsSurveyFragment surveyFragment = new SsSurveyFragment();
+            surveyFragment.setSurvey(survey);
+            fragmentTransaction.add(R.id.surveyContainer, surveyFragment);
+            fragmentTransaction.commit();
+        } catch (Exception e) {
+            Log.e(SS_RT_EXCEPTION_LOG, e.getStackTrace().toString());
         }
-
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-
-        SsSurveyFragment surveyFragment = new SsSurveyFragment(survey);
-        fragmentTransaction.add(R.id.surveyContainer, surveyFragment);
-        fragmentTransaction.commit();
     }
 
     @Override

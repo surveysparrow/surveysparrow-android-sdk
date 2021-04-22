@@ -67,7 +67,8 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     }
 
     public void showSurveyFragment(View v) {
-        SsSurveyFragment surveyFragment = new SsSurveyFragment(survey);
+        SsSurveyFragment surveyFragment = new SsSurveyFragment();
+        surveyFragment.setSurvey(survey);
 
         // Add the SsSurveyFragment to the Activity.
         FragmentManager fragmentManager = this.getSupportFragmentManager();

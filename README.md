@@ -13,7 +13,7 @@
 
 Add the following line to your **app modules** `build.gradle` file inside `dependencies`
 ```gradle
-implementation 'com.surveysparrow:ss-android-sdk:0.3.0'
+implementation 'com.surveysparrow:ss-android-sdk:0.4.0'
 ```
 
 The SDK need Internet access to fetch survey & submit answers. Add the following permissions to `AndroidManifest.xml` file
@@ -78,9 +78,18 @@ SsSurvey survey = new SsSurvey("your-company-domain", "sdk-token");
 ```
 
 #### Embed survey in your Activity
+**For versions below 0.4.0**
 ```java
 SsSurveyFragment surveyFragment = new SsSurveyFragment(survey);
+```
 
+**For other versions**
+```java
+SsSurveyFragment surveyFragment = new SsSurveyFragment();
+surveyFragment.setSurvey(survey);
+```
+#### Start the fragment transaction
+```java
 FragmentManager fragmentManager = this.getSupportFragmentManager();
 FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 fragmentTransaction.add(R.id.surveyContainer, surveyFragment);

@@ -38,12 +38,22 @@ public final class SsSurveyFragment extends Fragment {
     private OnSsResponseEventListener onSsResponseEventListener;
 
     /**
-     * Create SsSurveyFragment.
-     * @param survey SsSurvey object.
-     * @see SsSurvey
+     * Create SsSurveyFragment public constructor.
      */
-    public SsSurveyFragment(SsSurvey survey) {
+    public SsSurveyFragment() {
+        //  public, no-arg constructor 
+    }
+
+    /**
+     * Set the survey object.
+     * 
+     * @param survey SsSurvey object.
+     * @return Returns the same SsSurveyFragment object, for chaining
+     * multiple calls into a single statement.
+     */
+    public SsSurveyFragment setSurvey(SsSurvey survey) {
         this.survey = survey;
+        return this;
     }
 
     @Override

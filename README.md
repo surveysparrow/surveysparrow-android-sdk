@@ -11,9 +11,19 @@
 
 ## SDK integration (Require API level 19)
 
+Add it in your **root** `build.gradle` at the end of repositories:
+```gradle
+allprojects {
+		repositories {
+			...
+			maven { url 'https://jitpack.io' }
+		}
+	}
+```
+
 Add the following line to your **app modules** `build.gradle` file inside `dependencies`
 ```gradle
-implementation 'com.surveysparrow:ss-android-sdk:0.4.0'
+implementation 'com.github.surveysparrow:surveysparrow-android-sdk:0.4.0'
 ```
 
 The SDK need Internet access to fetch survey & submit answers. Add the following permissions to `AndroidManifest.xml` file

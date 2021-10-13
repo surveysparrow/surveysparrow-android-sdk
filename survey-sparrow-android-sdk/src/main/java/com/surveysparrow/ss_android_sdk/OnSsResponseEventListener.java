@@ -13,4 +13,5 @@ public interface OnSsResponseEventListener {
      * @see SsSurveyFragment
      */
     public void onSsResponseEvent(JSONObject data);
+    public void onSsSurveyLoaded(JSONObject data);
 }

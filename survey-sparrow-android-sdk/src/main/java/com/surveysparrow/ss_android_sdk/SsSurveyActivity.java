@@ -62,6 +62,7 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
         setResult(RESULT_OK, resultIntent);
 
         SurveySparrow.setAlreadyTaken(this, survey.getSurveyToken());
+        SurveySparrow.sendSurveyCompletedEvent(data);
 
         Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
@@ -70,6 +71,11 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
                 finish();
             }
         }, waitTime);
+    }
+
+    @Override
+    public void onSsSurveyLoaded(JSONObject data) {
+        SurveySparrow.sendSurveyLoadedEvent(data);
     }
 
     @Override

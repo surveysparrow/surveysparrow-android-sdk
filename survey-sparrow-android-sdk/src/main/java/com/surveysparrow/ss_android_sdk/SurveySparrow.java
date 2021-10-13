@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
  * Survey Sparrow helper class.
  */
 public final class SurveySparrow {
+    private static OnSsResponseEventListener onSsResponseEventListener;
     private SsSurvey survey;
     private Activity context;
 
@@ -118,6 +119,23 @@ public final class SurveySparrow {
         dialogMessage = context.getString(R.string.dialog_message);
         dialogPositiveButtonText = context.getString(R.string.dialog_positive_button);
         dialogNegativeButtonText = context.getString(R.string.dialog_negative_button);
+    }
+
+    public void setOnSsResponseEventListener(OnSsResponseEventListener eventListener){
+        onSsResponseEventListener = eventListener;
+    }
+
+    public static void sendSurveyLoadedEvent(JSONObject data) {
+        if(onSsResponseEventListener != null){
+            onSsResponseEventListener.onSsSurveyLoaded(data);
+        }
+    }
+
+    
+    public static void sendSurveyCompletedEvent(JSONObject data) {
+        if(onSsResponseEventListener != null){
+            onSsResponseEventListener.onSsResponseEvent(data);
+        }
     }
 
     /**

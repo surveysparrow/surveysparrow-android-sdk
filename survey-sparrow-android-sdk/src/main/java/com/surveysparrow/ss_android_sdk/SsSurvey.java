@@ -125,6 +125,13 @@ public final class SsSurvey implements Serializable {
         return this;
     }
 
+        public SsSurvey setIsSurveyLoaded(boolean isSurveyLoaded){
+        if(isSurveyLoaded){
+            addCustomParam("isSurveyLoaded","true");
+        }
+        return this;
+    }
+
     private String generateBaseUrl(CharSequence domain, CharSequence surveyToken) {
         return "https://" + domain + "/" + (surveyType == SurveySparrow.NPS ? 'n' : 's') + "/android/" + surveyToken;
     }

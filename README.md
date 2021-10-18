@@ -241,5 +241,6 @@ Implement `OnSsResponseEventListener` in your Activity to listen for survey resp
 |Return|Prototype|
 |-----------|------|
 |`void`|`onSsResponseEvent(JSONObject data)`: Override this method to handle survey response event while using SsSurveyFragment.|
+|`void`|`onSsSurveyLoaded(JSONObject data)`: Override this method to handle survey load event while using SsSurveyFragment.|
 
 > Please submit bugs/issues through GitHub issues we will try to fix it ASAP.

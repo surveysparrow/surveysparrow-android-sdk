@@ -107,7 +107,5 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     }
 
     @Override
-    public void onSsSurveyLoaded(JSONObject data) {
-
-    }
+    public void onSsSurveyLoaded(JSONObject data) { Log.v(LOG_TAG, data.toString()); }
 }

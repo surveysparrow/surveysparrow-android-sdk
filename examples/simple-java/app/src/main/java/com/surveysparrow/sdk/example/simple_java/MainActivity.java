@@ -45,6 +45,7 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
 
         // Create a SsSurvey object with your domain & survey token.
         survey = new SsSurvey(SS_DOMAIN, SS_TOKEN);
+        survey.setIsSurveyLoaded(true);
 
         // You only need SurveySparrow object if you want to open the survey in an Activity or schedule it.
         surveySparrow = new SurveySparrow(this, survey)
@@ -58,7 +59,17 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
                 .setRepeatInterval(TimeUnit.DAYS.toMillis(5L))
                 .setRepeatType(SurveySparrow.REPEAT_TYPE_CONSTANT)
                 .setFeedbackType(SurveySparrow.SINGLE_FEEDBACK);
+        surveySparrow.setOnSsResponseEventListener(new OnSsResponseEventListener() {
+            @Override
+            public void onSsResponseEvent(JSONObject jsonObject) {
+                Log.v("SS_SAMPLE_SCHEDULE", jsonObject.toString());
+            }
 
+            @Override
+            public void onSsSurveyLoaded(JSONObject jsonObject) {
+                Log.v("SS_SAMPLE_SCHEDULE", jsonObject.toString());
+            }
+        });
         surveySparrow.scheduleSurvey(SURVEY_SCHEDULE_REQUEST_CODE);
     }
 
@@ -93,5 +104,10 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     @Override
     public void onSsResponseEvent(JSONObject s) {
         Log.v(LOG_TAG, s.toString());
+    }
+
+    @Override
+    public void onSsSurveyLoaded(JSONObject data) {
+
     }
 }

@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import android.view.Gravity;
@@ -37,6 +38,7 @@ public final class SsSurveyFragment extends Fragment {
 
     private OnSsResponseEventListener onSsResponseEventListener;
 
+    WebView ssWebView;
     /**
      * Create SsSurveyFragment public constructor.
      */
@@ -57,6 +59,12 @@ public final class SsSurveyFragment extends Fragment {
     }
 
     @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setRetainInstance(true);
+    }
+
+    @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         onSsResponseEventListener = (OnSsResponseEventListener) context;
@@ -71,7 +79,7 @@ public final class SsSurveyFragment extends Fragment {
         progressBar.setMax(100);
         progressBar.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 6, Gravity.TOP));
 
-        WebView ssWebView = new WebView(getActivity());
+        ssWebView = new WebView(getActivity());
         ssWebView.getSettings().setJavaScriptEnabled(true);
         ssWebView.getSettings().setDomStorageEnabled(true);
         ssWebView.addJavascriptInterface(new JsObject(), "SsAndroidSdk");

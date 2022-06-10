@@ -111,7 +111,7 @@ public final class SsSurveyFragment extends Fragment {
         });
 
         ssWebView.loadUrl(this.survey.getSsUrl());
-        
+
         ssLayout.addView(ssWebView);
         ssLayout.addView(progressBar);
         return ssLayout;

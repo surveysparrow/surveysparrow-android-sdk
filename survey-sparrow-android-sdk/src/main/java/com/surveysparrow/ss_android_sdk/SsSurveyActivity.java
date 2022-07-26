@@ -34,7 +34,7 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
             enableButton = intent.getBooleanExtra(SurveySparrow.SS_BACK_BUTTON, true);
             waitTime = intent.getLongExtra(SurveySparrow.SS_WAIT_TIME, SurveySparrow.SS_DEFAULT_WAIT_TIME);
             survey = (SsSurvey) intent.getSerializableExtra(SurveySparrow.SS_SURVEY);
-    
+  
             setTheme(activityTheme);
             setContentView(R.layout.activity_ss_survey);
             ActionBar actionBar = getSupportActionBar();
@@ -42,14 +42,23 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
                 actionBar.setTitle(appbarTitle);
                 actionBar.setDisplayHomeAsUpEnabled(enableButton);
             }
-    
-            FragmentManager fragmentManager = getSupportFragmentManager();
-            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-    
-            SsSurveyFragment surveyFragment = new SsSurveyFragment();
-            surveyFragment.setSurvey(survey);
-            fragmentTransaction.add(R.id.surveyContainer, surveyFragment);
-            fragmentTransaction.commit();
+
+            if(savedInstanceState == null) {
+                FragmentManager fragmentManager = getSupportFragmentManager();
+                FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+                SsSurveyFragment surveyFragment = new SsSurveyFragment();
+                surveyFragment.setSurvey(survey);
+                fragmentTransaction.add(R.id.surveyContainer, surveyFragment,"SURVEY_FRAGMENT_TAG");
+                fragmentTransaction.commit();
+            }
+            else{
+                FragmentManager fragmentManager = getSupportFragmentManager();
+                FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+                SsSurveyFragment surveyFragment = (SsSurveyFragment) getSupportFragmentManager().findFragmentByTag("SURVEY_FRAGMENT_TAG");
+                surveyFragment.setSurvey(survey);
+                fragmentTransaction.replace(R.id.surveyContainer,surveyFragment,"SURVEY_FRAGMENT_TAG");
+                fragmentTransaction.commit();
+            }
         } catch (Exception e) {
             Log.e(SS_RT_EXCEPTION_LOG, e.getStackTrace().toString());
         }

@@ -181,9 +181,9 @@ public final class SurveySparrow {
            if(jsonObject.getBoolean("active") != true){
                 if(validationListener != null){
                       validationListener.onSsValidateSurvey(jsonObject);
+                       return;
                 }
                 Log.v(SS_VALIDATION, "survey validation error json" + jsonObject.toString() );
-                return;
             }
          } catch (Exception e) {
                 Log.e(SS_VALIDATION, "Error in  processing  apiCallTask json" + e);
@@ -480,9 +480,10 @@ public final class SurveySparrow {
                 if(jsonObject.getBoolean("active") != true){
                     if(validationListener != null){
                         validationListener.onSsValidateSurvey(jsonObject);
+                        return;
                     }
                     Log.v(SS_VALIDATION, "survey validation error json" + jsonObject.toString() );
-                    return;
+                  
                 }
             } catch (Exception e) {
                Log.e(SS_VALIDATION, "Error in  processing  apiCallTask json" + e);

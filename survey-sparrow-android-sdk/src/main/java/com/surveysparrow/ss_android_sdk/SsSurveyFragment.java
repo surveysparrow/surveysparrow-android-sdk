@@ -114,9 +114,9 @@ public final class SsSurveyFragment extends Fragment {
                 if(jsonObject.getBoolean("active") != true){
                     if(validationListener != null){
                         validationListener.onSsValidateSurvey(jsonObject);
+                        return null;
                     }
                     Log.v(SS_VALIDATION, "survey validation error json" + jsonObject.toString() );
-                    return null;
                 }
                 } catch (Exception e) {
                 Log.e(SS_VALIDATION, "Error in  processing  apiCallTask json" + e);

@@ -10,6 +10,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
 import android.widget.Toast;
+import android.os.AsyncTask;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.StringRes;
@@ -19,14 +20,18 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Date;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import com.surveysparrow.ss_android_sdk.SsSurvey.CustomParam;
 
 /**
  * Survey Sparrow helper class.
  */
 public final class SurveySparrow {
     private SsSurvey survey;
+    public static final String LOG_TAG = "SS_SAMPLE";
     private Activity context;
+    public JSONObject jsonObject; 
 
     private int activityTheme = R.style.SurveyTheme;
     private CharSequence appBarTitle;
@@ -82,6 +87,7 @@ public final class SurveySparrow {
      * Debug log tag.
      */
     public static final String SS_DEBUG_LOG = "SS_DEBUG_LOG";
+    public static final String SS_VALIDATION = "SS_VALIDATION";
 
     static final String SS_SURVEY = "SS_SURVEY";
     static final String SS_ACTIVITY_THEME = "SS_ACTIVITY_THEME";
@@ -95,6 +101,11 @@ public final class SurveySparrow {
     private static final String SHARED_PREF_IS_TAKEN = "IS_ALREADY_TAKEN";
     private static final String SHARED_PREF_PROMPT_TIME = "PROMPT_TIME";
     private static final String SHARED_PREF_INCREMENT = "INCREMENT_MULTIPLIER";
+    private OnSsValidateSurveyEventListener validationListener;
+
+    public void setValidateSurveyListener(OnSsValidateSurveyEventListener listener) {
+        validationListener = listener;
+    }
 
     /**
      * Build a SurveySparrow object. By using this object you will be able to start a
@@ -140,6 +151,44 @@ public final class SurveySparrow {
         intent.putExtra(SS_BACK_BUTTON, enableBackButton);
         intent.putExtra(SS_WAIT_TIME, waitTime);
         context.startActivityForResult(intent, requestCode);
+    }
+
+
+    public void startSurvey(int requestCode) {
+        if (!isNetworkConnected()) {
+            Toast.makeText(context, R.string.no_network_message, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        CustomParam[] customparam = survey.getCustomParams();
+        String apiUrl = "https://"+ survey.getDomain()+"/sdk/validate-survey/"+survey.getSurveyToken();
+        APICallTask apiCallTask = new APICallTask(apiUrl,customparam, new APICallTask.ApiCallback() {
+        @Override
+        public void onResponse(String response) {
+              try {
+                jsonObject = new JSONObject(response);
+              } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        });
+        apiCallTask.execute(apiUrl);
+        try {
+            apiCallTask.await();  
+        } catch (InterruptedException e) {
+             Log.e(SS_VALIDATION, "Error in apiCallTask" + e);
+        }
+         try {
+           if(jsonObject.getBoolean("active") != true){
+                if(validationListener != null){
+                      validationListener.onSsValidateSurvey(jsonObject);
+                }
+                Log.v(SS_VALIDATION, "survey validation error json" + jsonObject.toString() );
+                return;
+            }
+         } catch (Exception e) {
+                Log.e(SS_VALIDATION, "Error in  processing  apiCallTask json" + e);
+        } 
+         startSurveyForResult(requestCode);
     }
 
     /**
@@ -409,6 +458,35 @@ public final class SurveySparrow {
         }
 
         if (_promptTime < now && (!_isAlreadyTaken || feedbackType == MULTIPLE_FEEDBACK)) {
+            CustomParam[] customparam = survey.getCustomParams();
+            String apiUrl = "https://"+ survey.getDomain()+"/sdk/validate-survey/"+survey.getSurveyToken();
+            APICallTask apiCallTask = new APICallTask(apiUrl,customparam, new APICallTask.ApiCallback() {
+            @Override
+            public void onResponse(String response) {
+                try {
+                    jsonObject = new JSONObject(response);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+            });
+            apiCallTask.execute(apiUrl);
+            try {
+                apiCallTask.await();  
+            } catch (InterruptedException e) {
+                Log.e(SS_VALIDATION, "Error in apiCallTask" + e);
+            }
+            try {
+                if(jsonObject.getBoolean("active") != true){
+                    if(validationListener != null){
+                        validationListener.onSsValidateSurvey(jsonObject);
+                    }
+                    Log.v(SS_VALIDATION, "survey validation error json" + jsonObject.toString() );
+                    return;
+                }
+            } catch (Exception e) {
+               Log.e(SS_VALIDATION, "Error in  processing  apiCallTask json" + e);
+            } 
             AlertDialog.Builder builder = new AlertDialog.Builder(context);
             builder.setTitle(dialogTitle)
                     .setMessage(dialogMessage)

@@ -5,10 +5,13 @@ import android.net.Uri;
 import androidx.annotation.IntDef;
 
 import java.io.Serializable;
+import android.util.Log;
 
 public final class SsSurvey implements Serializable {
     private String baseUrl;
     private String surveyToken;
+    private String surveyDomain;
+    public transient CustomParam[] customParamsValue;
     private String customVariableString = "?";
     private int surveyType = SurveySparrow.CLASSIC;
     private boolean isThankYouRedirect = true;
@@ -17,8 +20,8 @@ public final class SsSurvey implements Serializable {
      * Custom param class
      */
     public static class CustomParam {
-        private CharSequence name;
-        private CharSequence value;
+        public CharSequence name;
+        public CharSequence value;
 
         /**
          * Create custom param.
@@ -41,6 +44,7 @@ public final class SsSurvey implements Serializable {
     public SsSurvey(CharSequence domain, CharSequence surveyToken) {
         this.baseUrl = generateBaseUrl(domain, surveyToken);
         this.surveyToken = surveyToken.toString();
+        this.surveyDomain = domain.toString();
     }
 
     /**
@@ -53,6 +57,9 @@ public final class SsSurvey implements Serializable {
      */
     public SsSurvey(CharSequence domain, CharSequence surveyToken, CustomParam[] customParams) {
         this.baseUrl = generateBaseUrl(domain, surveyToken);
+        this.surveyToken = surveyToken.toString();
+        this.surveyDomain = domain.toString();
+        this.customParamsValue = customParams;
         addCustomParams(customParams);
     }
 
@@ -62,6 +69,14 @@ public final class SsSurvey implements Serializable {
 
     String getSurveyToken() {
         return surveyToken;
+    }
+
+    String getDomain() {
+        return surveyDomain;
+    }
+
+    CustomParam[] getCustomParams() {
+        return customParamsValue;
     }
 
     boolean getThankYouRedirect() {

@@ -50,6 +50,7 @@ SurveySparrow surveySparrow = new SurveySparrow(this, survey)
                 .setAppBarTitle(R.string.app_name)
                 .enableBackButton(true)
                 .setWaitTime(2000)
+                .setValidateSurveyListener(this); // add this if you are using OnSsValidateSurveyEventListener in your activity
 ```
 
 #### Start the feedback Activity
@@ -77,8 +78,19 @@ protected void onActivityResult(int requestCode, int resultCode, @Nullable
 }
 ```
 
+#### Handle survey validation
+Override the `onSsValidateSurvey` to handle the survey validation.
+```java
+@Override
+public void onSsValidateSurvey(JSONObject s) {
+    Log.v(LOG_TAG, "survey validation error json" + s.toString());
+}
+```
+
 ### Embed survey in your Activity
 Embed the feedback experience to your `Activity` using the [`SsSurveyFragment`](#SsSurveyFragment). Then you can implement the `OnSsResponseEventListener` interface to handle response after submission.
+
+Implement `OnSsValidateSurveyEventListener` interface to handle validation of survey
 
 <img width="340" alt="SurveySparrow Android SDK embed view" src="https://user-images.githubusercontent.com/61273614/85107978-7b96b180-b22c-11ea-9e7e-381ff94992d8.png">
 
@@ -96,6 +108,7 @@ SsSurveyFragment surveyFragment = new SsSurveyFragment(survey);
 **For other versions**
 ```java
 SsSurveyFragment surveyFragment = new SsSurveyFragment();
+surveyFragment.setValidateSurveyListener(this); // add this if you are using OnSsValidateSurveyEventListener in your activity
 surveyFragment.setSurvey(survey);
 ```
 #### Start the fragment transaction
@@ -119,6 +132,14 @@ public class YourActivity extends AppCompatActivity implements OnSsResponseEvent
   // Your Code...
 }
 ```
+#### Handle survey validation
+Override the `onSsValidateSurvey` to handle the survey validation.
+```java
+@Override
+public void onSsValidateSurvey(JSONObject s) {
+    Log.v(LOG_TAG, "survey validation error json" + s.toString());
+}
+```
 
 ### Schedule Surveys
 Ask the user to take a feedback survey when they open your app/Activity/page after a period of time.
@@ -137,6 +158,7 @@ surveySparrow = new SurveySparrow(this, survey)
         .setAppBarTitle(R.string.app_name)
         .enableBackButton(true)
         .setWaitTime(2000)
+        .setValidateSurveyListener(this); // add this if you are using OnSsValidateSurveyEventListener in your activity
 
         // Schedule specific config
         .setStartAfter(TimeUnit.DAYS.toMillis(3L))
@@ -149,6 +171,10 @@ surveySparrow.scheduleSurvey(SURVEY_SCHEDULE_REQUEST_CODE);
 
 #### Handle response
 Handle response the same way as [Take feedback using Activity](#Take-feedback-using-`Activity`)
+
+#### Handle survey validation
+Handle survey validation the same way as [Handle survey validation](#Handle-survey-validation`)
+
 
 #### Clear a schedule
 You can clear a schedule by calling the `surveySparrow.clearSchedule()` method.

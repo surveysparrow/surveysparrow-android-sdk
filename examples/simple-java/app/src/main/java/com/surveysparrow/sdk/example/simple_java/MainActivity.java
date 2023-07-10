@@ -11,15 +11,17 @@ import android.util.Log;
 import android.view.View;
 
 import com.surveysparrow.ss_android_sdk.OnSsResponseEventListener;
+import com.surveysparrow.ss_android_sdk.OnSsValidateSurveyEventListener;
 import com.surveysparrow.ss_android_sdk.SsSurvey;
 import com.surveysparrow.ss_android_sdk.SsSurveyFragment;
 import com.surveysparrow.ss_android_sdk.SurveySparrow;
+import com.surveysparrow.ss_android_sdk.SsSurvey.CustomParam;
 
 import org.json.JSONObject;
 
 import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends AppCompatActivity implements OnSsResponseEventListener {
+public class MainActivity extends AppCompatActivity implements OnSsResponseEventListener, OnSsValidateSurveyEventListener {
     public static final int SURVEY_REQUEST_CODE = 1;
     public static final int SURVEY_SCHEDULE_REQUEST_CODE = 2;
     public static final String LOG_TAG = "SS_SAMPLE";
@@ -58,7 +60,7 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
                 .setRepeatInterval(TimeUnit.DAYS.toMillis(5L))
                 .setRepeatType(SurveySparrow.REPEAT_TYPE_CONSTANT)
                 .setFeedbackType(SurveySparrow.SINGLE_FEEDBACK);
-
+        surveySparrow.setValidateSurveyListener(this);
         surveySparrow.scheduleSurvey(SURVEY_SCHEDULE_REQUEST_CODE);
     }
 
@@ -66,8 +68,14 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
         surveySparrow.startSurveyForResult(SURVEY_REQUEST_CODE);
     }
 
+    public void startSurvey(View v) {
+        surveySparrow.setValidateSurveyListener(this);
+        surveySparrow.startSurvey(SURVEY_REQUEST_CODE);
+    }
+
     public void showSurveyFragment(View v) {
         SsSurveyFragment surveyFragment = new SsSurveyFragment();
+        surveyFragment.setValidateSurveyListener(this);
         surveyFragment.setSurvey(survey);
 
         // Add the SsSurveyFragment to the Activity.
@@ -93,5 +101,10 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     @Override
     public void onSsResponseEvent(JSONObject s) {
         Log.v(LOG_TAG, s.toString());
+    }
+
+    @Override
+    public void onSsValidateSurvey(JSONObject s) {
+        Log.v(LOG_TAG, "survey validation error json" + s.toString());
     }
 }

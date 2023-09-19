@@ -37,6 +37,7 @@ public final class SurveySparrow {
     private CharSequence appBarTitle;
     private boolean enableBackButton = true;
     private long waitTime = SS_DEFAULT_WAIT_TIME;
+    private int widgetContactId;
 
     private CharSequence dialogTitle;
     private CharSequence dialogMessage;
@@ -94,6 +95,7 @@ public final class SurveySparrow {
     static final String SS_APPBAR_TITLE = "SS_APPBAR_TITLE";
     static final String SS_BACK_BUTTON = "SS_BACK_BUTTON";
     static final String SS_WAIT_TIME = "SS_WAIT_TIME";
+    static final String SS_WIDGET_CONTACT_ID = "widgetContactId";
     static final long SS_DEFAULT_WAIT_TIME = 3000;
     static final String SS_THANK_YOU_BASE_URL = "https://surveysparrow.com/thankyou";
 
@@ -150,6 +152,7 @@ public final class SurveySparrow {
         intent.putExtra(SS_APPBAR_TITLE, appBarTitle);
         intent.putExtra(SS_BACK_BUTTON, enableBackButton);
         intent.putExtra(SS_WAIT_TIME, waitTime);
+        intent.putExtra(SS_WIDGET_CONTACT_ID, widgetContactId);
         context.startActivityForResult(intent, requestCode);
     }
 
@@ -184,6 +187,9 @@ public final class SurveySparrow {
                        return;
                 }
                 Log.v(SS_VALIDATION, "survey validation error json" + jsonObject.toString() );
+            }
+            if(jsonObject.has(SS_WIDGET_CONTACT_ID)){
+                 widgetContactId = jsonObject.getInt(SS_WIDGET_CONTACT_ID);
             }
          } catch (Exception e) {
                 Log.e(SS_VALIDATION, "Error in  processing  apiCallTask json" + e);
@@ -484,6 +490,9 @@ public final class SurveySparrow {
                     }
                     Log.v(SS_VALIDATION, "survey validation error json" + jsonObject.toString() );
                   
+                }
+                if(jsonObject.has(SS_WIDGET_CONTACT_ID)){
+                    widgetContactId = jsonObject.getInt(SS_WIDGET_CONTACT_ID);
                 }
             } catch (Exception e) {
                Log.e(SS_VALIDATION, "Error in  processing  apiCallTask json" + e);

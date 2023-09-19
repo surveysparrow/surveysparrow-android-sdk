@@ -15,7 +15,7 @@ import android.util.Log;
 
 import org.json.JSONObject;
 
-public final class SsSurveyActivity extends AppCompatActivity implements OnSsResponseEventListener {
+public final class SsSurveyActivity extends AppCompatActivity implements OnSsResponseEventListener, OnSsCloseSurveyEventListener {
     private SsSurvey survey;
     private int activityTheme;
     private CharSequence appbarTitle;
@@ -27,10 +27,11 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
     protected void onCreate(Bundle savedInstanceState) {
         try {
             super.onCreate(savedInstanceState);
-    
+
             Intent intent = getIntent();
             activityTheme = intent.getIntExtra(SurveySparrow.SS_ACTIVITY_THEME, R.style.SurveyTheme);
             appbarTitle = intent.getStringExtra(SurveySparrow.SS_APPBAR_TITLE);
+            int widgetContactId = getIntent().getIntExtra("widgetContactId", 0);
             enableButton = intent.getBooleanExtra(SurveySparrow.SS_BACK_BUTTON, true);
             waitTime = intent.getLongExtra(SurveySparrow.SS_WAIT_TIME, SurveySparrow.SS_DEFAULT_WAIT_TIME);
             survey = (SsSurvey) intent.getSerializableExtra(SurveySparrow.SS_SURVEY);
@@ -43,20 +44,23 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
                 actionBar.setDisplayHomeAsUpEnabled(enableButton);
             }
 
-            if(savedInstanceState == null) {
+            if (savedInstanceState == null) {
                 FragmentManager fragmentManager = getSupportFragmentManager();
                 FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
                 SsSurveyFragment surveyFragment = new SsSurveyFragment();
+                surveyFragment.setCloseSurveyListener(this);
+                surveyFragment.setData(widgetContactId);
                 surveyFragment.setSurvey(survey);
-                fragmentTransaction.add(R.id.surveyContainer, surveyFragment,"SURVEY_FRAGMENT_TAG");
+                fragmentTransaction.add(R.id.surveyContainer, surveyFragment, "SURVEY_FRAGMENT_TAG");
                 fragmentTransaction.commit();
-            }
-            else{
+            } else {
                 FragmentManager fragmentManager = getSupportFragmentManager();
                 FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
                 SsSurveyFragment surveyFragment = (SsSurveyFragment) getSupportFragmentManager().findFragmentByTag("SURVEY_FRAGMENT_TAG");
                 surveyFragment.setSurvey(survey);
-                fragmentTransaction.replace(R.id.surveyContainer,surveyFragment,"SURVEY_FRAGMENT_TAG");
+                surveyFragment.setCloseSurveyListener(this);
+                surveyFragment.setData(widgetContactId);
+                fragmentTransaction.replace(R.id.surveyContainer, surveyFragment, "SURVEY_FRAGMENT_TAG");
                 fragmentTransaction.commit();
             }
         } catch (Exception e) {
@@ -88,5 +92,16 @@ public final class SsSurveyActivity extends AppCompatActivity implements OnSsRes
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onSsCloseSurveyEvent() {
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                finish();
+            }
+        }, 0);
     }
 }

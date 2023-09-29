@@ -30,7 +30,7 @@
 
     <FrameLayout
         android:id="@+id/surveyContainer"
-        android:layout_width="409dp"
+        android:layout_width="wrap_content"
         android:layout_height="320dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

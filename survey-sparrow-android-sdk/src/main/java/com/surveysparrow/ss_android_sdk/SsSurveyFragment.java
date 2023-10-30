@@ -124,12 +124,12 @@ public final class SsSurveyFragment extends Fragment {
                 Log.e(SS_VALIDATION, "Error in apiCallTask" + e);
             }
             try {
+                if (validationListener != null) {
+                    validationListener.onSsValidateSurvey(jsonObject);
+                }
+                Log.v(SS_VALIDATION, "survey validation json" + jsonObject.toString());
                 if (jsonObject.getBoolean("active") != true) {
-                    if (validationListener != null) {
-                        validationListener.onSsValidateSurvey(jsonObject);
                         return null;
-                    }
-                    Log.v(SS_VALIDATION, "survey validation error json" + jsonObject.toString());
                 }
                 if (jsonObject.has("widgetContactId")) {
                     widgetContactId = jsonObject.getInt("widgetContactId");

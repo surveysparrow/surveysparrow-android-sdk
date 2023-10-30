@@ -181,12 +181,12 @@ public final class SurveySparrow {
              Log.e(SS_VALIDATION, "Error in apiCallTask" + e);
         }
          try {
-           if(jsonObject.getBoolean("active") != true){
-                if(validationListener != null){
-                      validationListener.onSsValidateSurvey(jsonObject);
-                       return;
-                }
-                Log.v(SS_VALIDATION, "survey validation error json" + jsonObject.toString() );
+            if(validationListener != null){
+                validationListener.onSsValidateSurvey(jsonObject);
+            }
+            Log.v(SS_VALIDATION, "survey validation json" + jsonObject.toString() );
+            if(jsonObject.getBoolean("active") != true){
+                return;
             }
             if(jsonObject.has(SS_WIDGET_CONTACT_ID)){
                  widgetContactId = jsonObject.getInt(SS_WIDGET_CONTACT_ID);
@@ -483,13 +483,12 @@ public final class SurveySparrow {
                 Log.e(SS_VALIDATION, "Error in apiCallTask" + e);
             }
             try {
+                if (validationListener != null) {
+                    validationListener.onSsValidateSurvey(jsonObject);
+                }
+                Log.v(SS_VALIDATION, "survey validation json" + jsonObject.toString() );
                 if(jsonObject.getBoolean("active") != true){
-                    if(validationListener != null){
-                        validationListener.onSsValidateSurvey(jsonObject);
-                        return;
-                    }
-                    Log.v(SS_VALIDATION, "survey validation error json" + jsonObject.toString() );
-                  
+                    return;
                 }
                 if(jsonObject.has(SS_WIDGET_CONTACT_ID)){
                     widgetContactId = jsonObject.getInt(SS_WIDGET_CONTACT_ID);

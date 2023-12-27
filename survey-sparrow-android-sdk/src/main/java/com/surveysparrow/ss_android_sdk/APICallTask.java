@@ -1,6 +1,7 @@
 package com.surveysparrow.ss_android_sdk;
 
 import android.os.AsyncTask;
+import android.os.Build;
 import android.util.Log;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,6 +9,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -18,14 +20,12 @@ public class APICallTask extends AsyncTask<String, Void, String> {
     private String apiUrl;
     private CustomParam[] customparam;
     private ApiCallback callback;
-    private Semaphore semaphore;
     public static final String SS_API_ERROR = "SS_API_ERROR";
 
     public APICallTask(String apiUrl, CustomParam[] customparam, ApiCallback callback) {
         this.apiUrl = apiUrl;
         this.callback = callback;
         this.customparam = customparam;
-        this.semaphore = new Semaphore(0);
     }
 
     public static final String LOG_TAG = "SS_SAMPLE";
@@ -64,7 +64,6 @@ public class APICallTask extends AsyncTask<String, Void, String> {
                 bufferedReader.close();
                 inputStream.close();
                 callback.onResponse(response.toString());
-                semaphore.release();
                 return response.toString();
             } else {
                  String errorMessage = getErrorMessage(connection);
@@ -90,9 +89,18 @@ public class APICallTask extends AsyncTask<String, Void, String> {
         return errorMessage.toString();
     }
 
-    public void await() throws InterruptedException {
-        semaphore.acquire();
+    public CompletableFuture<String> executeAsync() {
+        CompletableFuture<String> future = new CompletableFuture<>();
+        execute(apiUrl);
+        return future;
     }
+
+    @Override
+    protected void onPostExecute(String result) {
+        // Complete the CompletableFuture when the AsyncTask completes
+        CompletableFuture.completedFuture(result).thenAccept(callback::onResponse);
+    }
+
     public interface ApiCallback {
         void onResponse(String response);
     }

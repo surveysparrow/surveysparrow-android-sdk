@@ -29,6 +29,8 @@ import android.widget.TextView;
 
 import com.surveysparrow.ss_android_sdk.SsSurvey.CustomParam;
 import android.os.AsyncTask;
+
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.Set;
 import org.json.JSONException;
@@ -103,27 +105,34 @@ public final class SsSurveyFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
         Bundle savedInstanceState) {
+
+        Log.d("Updated", "startSurvey 2 Updated");
+
+
         // we are checking the activity name here to avoid duplicate api call                 
         if (!activity.equals("SsSurveyActivity")) {
             CustomParam[] customparam = survey.getCustomParams();
             String apiUrl = "https://" + survey.getDomain() + "/sdk/validate-survey/" + survey.getSurveyToken();
+            // Create a CompletableFuture for the asynchronous API call
+            CompletableFuture<String> apiCallFuture = new CompletableFuture<>();
+
             APICallTask apiCallTask = new APICallTask(apiUrl, customparam, new APICallTask.ApiCallback() {
                 @Override
                 public void onResponse(String response) {
-                    try {
-                        jsonObject = new JSONObject(response);
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
+                    apiCallFuture.complete(response);
                 }
             });
+
+            // Execute the AsyncTask asynchronously
             apiCallTask.execute(apiUrl);
+
+            // Wait for the asynchronous API call to complete
+            apiCallFuture.join();
+
             try {
-                apiCallTask.await();
-            } catch (InterruptedException e) {
-                Log.e(SS_VALIDATION, "Error in apiCallTask" + e);
-            }
-            try {
+                String response = apiCallFuture.get(); // Get the result of the API call
+                JSONObject jsonObject = new JSONObject(response);
+
                 if (validationListener != null) {
                     validationListener.onSsValidateSurvey(jsonObject);
                 }

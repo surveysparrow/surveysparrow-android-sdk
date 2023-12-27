@@ -29,13 +29,13 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     /**
      * Domain of your SurveySparrow account.
      */
-    public static final String SS_DOMAIN = "your-domain";
+    public static final String SS_DOMAIN = "gokulkrishnaraju1183.surveysparrow.com";
 
     /**
      * Mobile SDK token of your survey.
      * You can generate a Mobile SDK token in your survey's share page.
      */
-    public static final String SS_TOKEN = "your-survey-token";
+    public static final String SS_TOKEN = "ntt-a3mxgnEfWopULfXcnrTXnv";
 
     SsSurvey survey;
     SurveySparrow surveySparrow;
@@ -44,9 +44,13 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        CustomParam[] params = {
+                new CustomParam("emailaddress", "harsha@surveysparrow.com"),
+                new CustomParam("email", "harshs@surveysparrow.com"),
+                new CustomParam("url", "a"),
+        };
         // Create a SsSurvey object with your domain & survey token.
-        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN);
+        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params);
 
         // You only need SurveySparrow object if you want to open the survey in an Activity or schedule it.
         surveySparrow = new SurveySparrow(this, survey)
@@ -105,6 +109,6 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
 
     @Override
     public void onSsValidateSurvey(JSONObject s) {
-        Log.v(LOG_TAG, "survey validation error json" + s.toString());
+        Log.v(LOG_TAG, "survey validation json" + s.toString());
     }
 }

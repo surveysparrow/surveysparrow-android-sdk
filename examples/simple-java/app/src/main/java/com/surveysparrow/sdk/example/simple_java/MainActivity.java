@@ -29,13 +29,13 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     /**
      * Domain of your SurveySparrow account.
      */
-    public static final String SS_DOMAIN = "gokulkrishnaraju1183.surveysparrow.com";
+    public static final String SS_DOMAIN = "your-domain";
 
     /**
      * Mobile SDK token of your survey.
      * You can generate a Mobile SDK token in your survey's share page.
      */
-    public static final String SS_TOKEN = "ntt-a3mxgnEfWopULfXcnrTXnv";
+    public static final String SS_TOKEN = "your-survey-token";
 
     SsSurvey survey;
     SurveySparrow surveySparrow;
@@ -45,8 +45,8 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         CustomParam[] params = {
-                new CustomParam("emailaddress", "harsha@surveysparrow.com"),
-                new CustomParam("email", "harshs@surveysparrow.com"),
+                new CustomParam("emailaddress", "email@surveysparrow.com"),
+                new CustomParam("email", "email@surveysparrow.com"),
                 new CustomParam("url", "a"),
         };
         // Create a SsSurvey object with your domain & survey token.
@@ -109,6 +109,6 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
 
     @Override
     public void onSsValidateSurvey(JSONObject s) {
-        Log.v(LOG_TAG, "survey validation json" + s.toString());
+        Log.v(LOG_TAG, "survey validation error json" + s.toString());
     }
 }

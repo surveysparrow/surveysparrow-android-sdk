@@ -105,10 +105,6 @@ public final class SsSurveyFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
         Bundle savedInstanceState) {
-
-        Log.d("Updated", "startSurvey 2 Updated");
-
-
         // we are checking the activity name here to avoid duplicate api call                 
         if (!activity.equals("SsSurveyActivity")) {
             CustomParam[] customparam = survey.getCustomParams();

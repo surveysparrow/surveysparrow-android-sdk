@@ -159,9 +159,6 @@ public final class SurveySparrow {
     }
 
     public void startSurvey(int requestCode) {
-
-        Log.d("Updated", "startSurvey 1 Updated");
-
         if (!isNetworkConnected()) {
             Toast.makeText(context, R.string.no_network_message, Toast.LENGTH_SHORT).show();
             return;
@@ -463,7 +460,6 @@ public final class SurveySparrow {
      */
 
     public void scheduleSurvey(final int requestCode) {
-        Log.d("Updated", "scheduleSurvey 1 Updated");
         fetchFromPref();
         final long now = new Date().getTime();
 

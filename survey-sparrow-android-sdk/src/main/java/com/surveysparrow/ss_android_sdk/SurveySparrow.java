@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.util.Log;
 import android.widget.Toast;
 import android.os.AsyncTask;
@@ -20,6 +21,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Date;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import com.surveysparrow.ss_android_sdk.SsSurvey.CustomParam;
@@ -156,45 +158,53 @@ public final class SurveySparrow {
         context.startActivityForResult(intent, requestCode);
     }
 
-
     public void startSurvey(int requestCode) {
         if (!isNetworkConnected()) {
             Toast.makeText(context, R.string.no_network_message, Toast.LENGTH_SHORT).show();
             return;
         }
+
         CustomParam[] customparam = survey.getCustomParams();
-        String apiUrl = "https://"+ survey.getDomain()+"/sdk/validate-survey/"+survey.getSurveyToken();
-        APICallTask apiCallTask = new APICallTask(apiUrl,customparam, new APICallTask.ApiCallback() {
-        @Override
-        public void onResponse(String response) {
-              try {
-                jsonObject = new JSONObject(response);
-              } catch (JSONException e) {
-                e.printStackTrace();
+        String apiUrl = "https://" + survey.getDomain() + "/sdk/validate-survey/" + survey.getSurveyToken();
+
+        // Create a CompletableFuture for the asynchronous API call
+        CompletableFuture<String> apiCallFuture = new CompletableFuture<>();
+
+        APICallTask apiCallTask = new APICallTask(apiUrl, customparam, new APICallTask.ApiCallback() {
+            @Override
+            public void onResponse(String response) {
+                apiCallFuture.complete(response);
             }
-        }
         });
+
+        // Execute the AsyncTask asynchronously
         apiCallTask.execute(apiUrl);
+
+        // Wait for the asynchronous API call to complete
+        apiCallFuture.join();
+
         try {
-            apiCallTask.await();  
-        } catch (InterruptedException e) {
-             Log.e(SS_VALIDATION, "Error in apiCallTask" + e);
-        }
-         try {
-            if(validationListener != null){
+            String response = apiCallFuture.get(); // Get the result of the API call
+            JSONObject jsonObject = new JSONObject(response);
+
+            if (validationListener != null) {
                 validationListener.onSsValidateSurvey(jsonObject);
             }
-            Log.v(SS_VALIDATION, "survey validation json" + jsonObject.toString() );
-            if(jsonObject.getBoolean("active") != true){
+
+            Log.v(SS_VALIDATION, "Survey validation json: " + jsonObject.toString());
+
+            if (!jsonObject.getBoolean("active")) {
                 return;
             }
-            if(jsonObject.has(SS_WIDGET_CONTACT_ID)){
-                 widgetContactId = jsonObject.getInt(SS_WIDGET_CONTACT_ID);
+
+            if (jsonObject.has(SS_WIDGET_CONTACT_ID)) {
+                widgetContactId = jsonObject.getInt(SS_WIDGET_CONTACT_ID);
             }
-         } catch (Exception e) {
-                Log.e(SS_VALIDATION, "Error in  processing  apiCallTask json" + e);
-        } 
-         startSurveyForResult(requestCode);
+        } catch (InterruptedException | ExecutionException | JSONException e) {
+            Log.e(SS_VALIDATION, "Error in processing apiCallTask json: " + e);
+        }
+
+        startSurveyForResult(requestCode);
     }
 
     /**
@@ -448,6 +458,7 @@ public final class SurveySparrow {
      * @param requestCode You can use this requestCode in the onActivityResult of the
      *                    calling Activity to handle the response.
      */
+
     public void scheduleSurvey(final int requestCode) {
         fetchFromPref();
         final long now = new Date().getTime();
@@ -466,23 +477,26 @@ public final class SurveySparrow {
         if (_promptTime < now && (!_isAlreadyTaken || feedbackType == MULTIPLE_FEEDBACK)) {
             CustomParam[] customparam = survey.getCustomParams();
             String apiUrl = "https://"+ survey.getDomain()+"/sdk/validate-survey/"+survey.getSurveyToken();
+
+            CompletableFuture<String> apiCallFuture = new CompletableFuture<>();
+
             APICallTask apiCallTask = new APICallTask(apiUrl,customparam, new APICallTask.ApiCallback() {
-            @Override
-            public void onResponse(String response) {
-                try {
-                    jsonObject = new JSONObject(response);
-                } catch (JSONException e) {
-                    e.printStackTrace();
+                @Override
+                public void onResponse(String response) {
+                    apiCallFuture.complete(response);
                 }
-            }
             });
+
+            // Execute the AsyncTask asynchronously
             apiCallTask.execute(apiUrl);
+
+            // Wait for the asynchronous API call to complete
+            apiCallFuture.join();
+
             try {
-                apiCallTask.await();  
-            } catch (InterruptedException e) {
-                Log.e(SS_VALIDATION, "Error in apiCallTask" + e);
-            }
-            try {
+                String response = apiCallFuture.get(); // Get the result of the API call
+                JSONObject jsonObject = new JSONObject(response);
+
                 if (validationListener != null) {
                     validationListener.onSsValidateSurvey(jsonObject);
                 }

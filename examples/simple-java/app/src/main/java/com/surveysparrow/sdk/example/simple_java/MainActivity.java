@@ -44,9 +44,13 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        CustomParam[] params = {
+                new CustomParam("emailaddress", "email@surveysparrow.com"),
+                new CustomParam("email", "email@surveysparrow.com"),
+                new CustomParam("url", "a"),
+        };
         // Create a SsSurvey object with your domain & survey token.
-        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN);
+        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params);
 
         // You only need SurveySparrow object if you want to open the survey in an Activity or schedule it.
         surveySparrow = new SurveySparrow(this, survey)

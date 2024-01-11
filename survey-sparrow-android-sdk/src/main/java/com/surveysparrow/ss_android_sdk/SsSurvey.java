@@ -1,11 +1,6 @@
 package com.surveysparrow.ss_android_sdk;
-
-import android.net.Uri;
-
 import androidx.annotation.IntDef;
-
 import java.io.Serializable;
-import android.util.Log;
 
 public final class SsSurvey implements Serializable {
     private String baseUrl;
@@ -64,24 +59,35 @@ public final class SsSurvey implements Serializable {
     }
 
     String getSsUrl() {
+        if( baseUrl == null || customVariableString == null )
+            return "" ;
+
         return baseUrl + customVariableString;
     }
 
     String getSurveyToken() {
+        if( surveyToken == null )
+            return "" ;
+
         return surveyToken;
     }
 
     String getDomain() {
+        if( surveyDomain == null )
+            return "" ;
+
         return surveyDomain;
     }
 
     CustomParam[] getCustomParams() {
+        if( customParamsValue == null  ) {
+            return new CustomParam[]{new CustomParam("email", "null@mail.com")};
+        }
+
         return customParamsValue;
     }
 
-    boolean getThankYouRedirect() {
-        return isThankYouRedirect;
-    }
+    boolean getThankYouRedirect() { return isThankYouRedirect; }
 
     /**
      * Add custom param to survey.
@@ -141,6 +147,9 @@ public final class SsSurvey implements Serializable {
     }
 
     private String generateBaseUrl(CharSequence domain, CharSequence surveyToken) {
+        if( domain == null || surveyToken == null )
+            return "https://surveysparrow.com" ;
+
         return "https://" + domain + "/" + (surveyType == SurveySparrow.NPS ? 'n' : 's') + "/android/" + surveyToken;
     }
 

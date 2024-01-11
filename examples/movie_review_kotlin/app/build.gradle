@@ -5,12 +5,12 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.2"
+    compileSdkVersion 33
+    buildToolsVersion "33.0.0"
     defaultConfig {
         applicationId "com.surveysparrow.sdk.example.movie_review_kotlin"
-        minSdkVersion 19
-        targetSdkVersion 29
+        minSdkVersion 24
+        targetSdkVersion 33
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -34,5 +34,5 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
 
     // SurveySparrow SDK
-    implementation 'com.github.surveysparrow:ss-android-sdk:0.4.0'
+    implementation 'com.github.surveysparrow:surveysparrow-android-sdk:0.4.3'
 }

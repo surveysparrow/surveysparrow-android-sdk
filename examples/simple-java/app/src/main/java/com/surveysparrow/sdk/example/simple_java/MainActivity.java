@@ -7,8 +7,11 @@ import androidx.fragment.app.FragmentTransaction;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
 
 import com.surveysparrow.ss_android_sdk.OnSsResponseEventListener;
 import com.surveysparrow.ss_android_sdk.OnSsValidateSurveyEventListener;
@@ -29,13 +32,15 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     /**
      * Domain of your SurveySparrow account.
      */
-    public static final String SS_DOMAIN = "your-domain";
+    public static String SS_DOMAIN = "your-domain";
 
     /**
      * Mobile SDK token of your survey.
      * You can generate a Mobile SDK token in your survey's share page.
      */
-    public static final String SS_TOKEN = "your-survey-token";
+    public static String SS_TOKEN = "your-survey-token";
+
+    public static String SS_LANG_CODE = "PREFERRED_LANG_CODE" ;
 
     SsSurvey survey;
     SurveySparrow surveySparrow;
@@ -44,13 +49,67 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        // Find the EditText fields
+        EditText token = findViewById(R.id.token);
+        EditText domain = findViewById(R.id.domain);
+        EditText langCode = findViewById(R.id.language);
+
+        // Add TextWatchers to the EditText fields to update SS_DOMAIN and SS_TOKEN
+        token.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                SS_TOKEN = editable.toString();
+                Log.d("SS_TOKEN", SS_TOKEN);
+            }
+        });
+
+        langCode.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                SS_LANG_CODE = editable.toString();
+                Log.d("SS_LANG_CODE", SS_LANG_CODE);
+            }
+        });
+
+        domain.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                SS_DOMAIN = editable.toString();
+                Log.d("SS_DOMAIN", SS_DOMAIN);
+            }
+        });
+    }
+
+    public void startSurveyActivity(View v) {
+        surveySparrow.startSurveyForResult(SURVEY_REQUEST_CODE);
+    }
+
+    public void startSurvey(View v) {
         CustomParam[] params = {
                 new CustomParam("emailaddress", "email@surveysparrow.com"),
                 new CustomParam("email", "email@surveysparrow.com"),
                 new CustomParam("url", "a"),
         };
         // Create a SsSurvey object with your domain & survey token.
-        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params);
+        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params, SS_LANG_CODE);
 
         // You only need SurveySparrow object if you want to open the survey in an Activity or schedule it.
         surveySparrow = new SurveySparrow(this, survey)
@@ -64,20 +123,20 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
                 .setRepeatInterval(TimeUnit.DAYS.toMillis(5L))
                 .setRepeatType(SurveySparrow.REPEAT_TYPE_CONSTANT)
                 .setFeedbackType(SurveySparrow.SINGLE_FEEDBACK);
-        surveySparrow.setValidateSurveyListener(this);
         surveySparrow.scheduleSurvey(SURVEY_SCHEDULE_REQUEST_CODE);
-    }
-
-    public void startSurveyActivity(View v) {
-        surveySparrow.startSurveyForResult(SURVEY_REQUEST_CODE);
-    }
-
-    public void startSurvey(View v) {
         surveySparrow.setValidateSurveyListener(this);
         surveySparrow.startSurvey(SURVEY_REQUEST_CODE);
     }
 
     public void showSurveyFragment(View v) {
+        CustomParam[] params = {
+                new CustomParam("emailaddress", "email@surveysparrow.com"),
+                new CustomParam("email", "email@surveysparrow.com"),
+                new CustomParam("url", "a"),
+        };
+        // Create a SsSurvey object with your domain & survey token.
+        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params, SS_LANG_CODE);
+
         SsSurveyFragment surveyFragment = new SsSurveyFragment();
         surveyFragment.setValidateSurveyListener(this);
         surveyFragment.setSurvey(survey);

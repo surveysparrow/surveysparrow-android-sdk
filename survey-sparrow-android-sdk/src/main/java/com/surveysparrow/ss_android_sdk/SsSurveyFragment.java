@@ -240,8 +240,7 @@ public final class SsSurveyFragment extends Fragment {
             }
         });
 
-        ssWebView.loadUrl(this.survey.getSsUrl());
-
+        ssWebView.loadUrl(this.survey.getSsUrlForWebView());
         ssLayout.addView(ssWebView);
         ssLayout.addView(progressBar);
         ssLayout.addView(closeButton);

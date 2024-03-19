@@ -11,6 +11,7 @@ public final class SsSurvey implements Serializable {
     private String baseUrl;
     private String surveyToken;
     private String surveyDomain;
+    private String langCode;
     public transient CustomParam[] customParamsValue;
     private String customVariableString = "?";
     private int surveyType = SurveySparrow.CLASSIC;
@@ -63,8 +64,21 @@ public final class SsSurvey implements Serializable {
         addCustomParams(customParams);
     }
 
+    public SsSurvey(CharSequence domain, CharSequence surveyToken, CustomParam[] customParams, CharSequence langCode) {
+        this.baseUrl = generateBaseUrl(domain, surveyToken, langCode);
+        this.surveyToken = surveyToken.toString();
+        this.surveyDomain = domain.toString();
+        this.customParamsValue = customParams;
+        this.langCode = langCode.toString() ;
+        addCustomParams(customParams);
+    }
+
     String getSsUrl() {
         return baseUrl + customVariableString;
+    }
+
+    String getSsUrlForWebView() {
+        return baseUrl ;
     }
 
     String getSurveyToken() {
@@ -143,6 +157,11 @@ public final class SsSurvey implements Serializable {
     private String generateBaseUrl(CharSequence domain, CharSequence surveyToken) {
         return "https://" + domain + "/" + (surveyType == SurveySparrow.NPS ? 'n' : 's') + "/android/" + surveyToken;
     }
+
+    private String generateBaseUrl(CharSequence domain, CharSequence surveyToken, CharSequence langCode) {
+        return "https://" + domain + "/" + (surveyType == SurveySparrow.NPS ? 'n' : 's') + "/android/" + surveyToken + "?sparrowLang=" + langCode;
+    }
+
 
     /**
      * Whether to redirect to thank you page outside the webview

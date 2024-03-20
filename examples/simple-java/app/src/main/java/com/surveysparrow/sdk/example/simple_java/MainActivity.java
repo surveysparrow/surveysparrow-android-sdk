@@ -110,11 +110,12 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
                 new CustomParam("url", "a"),
         };
 
-        HashMap map = new HashMap<String,String>();
-        map.put("langCode", SS_LANG_CODE);
+         // Add Language code in the properties HashMap and pass it to SsSurvey
+        HashMap properties = new HashMap<String,String>();
+        properties.put("langCode", SS_LANG_CODE);
 
         // Create a SsSurvey object with your domain & survey token.
-        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params, map);
+        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params, properties);
 
         // You only need SurveySparrow object if you want to open the survey in an Activity or schedule it.
         surveySparrow = new SurveySparrow(this, survey)

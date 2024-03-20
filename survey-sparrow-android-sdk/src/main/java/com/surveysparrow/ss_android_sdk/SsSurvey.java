@@ -1,17 +1,15 @@
 package com.surveysparrow.ss_android_sdk;
-
 import android.net.Uri;
-
 import androidx.annotation.IntDef;
-
 import java.io.Serializable;
+import java.util.HashMap;
 import android.util.Log;
 
 public final class SsSurvey implements Serializable {
     private String baseUrl;
     private String surveyToken;
     private String surveyDomain;
-    private String langCode;
+    private HashMap properties ;
     public transient CustomParam[] customParamsValue;
     private String customVariableString = "?";
     private int surveyType = SurveySparrow.CLASSIC;
@@ -38,7 +36,6 @@ public final class SsSurvey implements Serializable {
 
     /**
      * Create SsSurvey.
-     *
      * @param domain      Domain name.
      * @param surveyToken Survey token.
      */
@@ -64,12 +61,12 @@ public final class SsSurvey implements Serializable {
         addCustomParams(customParams);
     }
 
-    public SsSurvey(CharSequence domain, CharSequence surveyToken, CustomParam[] customParams, CharSequence langCode) {
-        this.baseUrl = generateBaseUrl(domain, surveyToken, langCode);
+    public SsSurvey(CharSequence domain, CharSequence surveyToken, CustomParam[] customParams, HashMap properties) {
+        this.baseUrl = generateBaseUrl(domain, surveyToken, properties.get("langCode").toString());
         this.surveyToken = surveyToken.toString();
         this.surveyDomain = domain.toString();
         this.customParamsValue = customParams;
-        this.langCode = langCode.toString() ;
+        this.properties = properties ;
         addCustomParams(customParams);
     }
 

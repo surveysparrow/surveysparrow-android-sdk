@@ -22,6 +22,7 @@ import com.surveysparrow.ss_android_sdk.SsSurvey.CustomParam;
 
 import org.json.JSONObject;
 
+import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity implements OnSsResponseEventListener, OnSsValidateSurveyEventListener {
@@ -108,8 +109,12 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
                 new CustomParam("email", "email@surveysparrow.com"),
                 new CustomParam("url", "a"),
         };
+
+        HashMap map = new HashMap<String,String>();
+        map.put("langCode", SS_LANG_CODE);
+
         // Create a SsSurvey object with your domain & survey token.
-        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params, SS_LANG_CODE);
+        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params, map);
 
         // You only need SurveySparrow object if you want to open the survey in an Activity or schedule it.
         surveySparrow = new SurveySparrow(this, survey)
@@ -134,8 +139,13 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
                 new CustomParam("email", "email@surveysparrow.com"),
                 new CustomParam("url", "a"),
         };
+
+        // Add Language code in the properties HashMap and pass it to SsSurvey
+        HashMap properties = new HashMap<String,String>();
+        properties.put("langCode", SS_LANG_CODE);
+
         // Create a SsSurvey object with your domain & survey token.
-        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params, SS_LANG_CODE);
+        survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params, properties);
 
         SsSurveyFragment surveyFragment = new SsSurveyFragment();
         surveyFragment.setValidateSurveyListener(this);

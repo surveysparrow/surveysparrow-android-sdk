@@ -201,7 +201,7 @@ Constructor - `CustomParam(CharSequence name, CharSequence value)`
 
 `SsSurvey(CharSequence domain, CharSequence surveyToken, CustomParam[] customParams)` : Create SsSurvey with domain, token & custom params.
 
-`SsSurvey(CharSequence domain, CharSequence surveyToken, CustomParam[] customParams,  CharSequence langCode)` : Create SsSurvey with domain, token , custom params and with traslate language code.
+`SsSurvey(CharSequence domain, CharSequence surveyToken, CustomParam[] customParams,  HashMap properties)` : Create SsSurvey with domain, token , custom params and with traslate language code.
 
 #### Public methods
 |Return|Prototype|

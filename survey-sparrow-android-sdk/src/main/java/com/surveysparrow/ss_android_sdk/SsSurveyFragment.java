@@ -239,9 +239,7 @@ public final class SsSurveyFragment extends Fragment {
                 progressBarAnimator.start();
             }
         });
-
         ssWebView.loadUrl(this.survey.getSsUrl());
-
         ssLayout.addView(ssWebView);
         ssLayout.addView(progressBar);
         ssLayout.addView(closeButton);

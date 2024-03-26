@@ -23,7 +23,7 @@ allprojects {
 
 Add the following line to your **app modules** `build.gradle` file inside `dependencies`
 ```gradle
-implementation 'com.github.surveysparrow:surveysparrow-android-sdk:0.4.7'
+implementation 'com.github.surveysparrow:surveysparrow-android-sdk:0.4.8'
 ```
 
 The SDK need Internet access to fetch survey & submit answers. Add the following permissions to `AndroidManifest.xml` file
@@ -200,6 +200,8 @@ Constructor - `CustomParam(CharSequence name, CharSequence value)`
 `SsSurvey(CharSequence domain, CharSequence surveyToken)` : Create SsSurvey with domain & token
 
 `SsSurvey(CharSequence domain, CharSequence surveyToken, CustomParam[] customParams)` : Create SsSurvey with domain, token & custom params.
+
+`SsSurvey(CharSequence domain, CharSequence surveyToken, CustomParam[] customParams,  HashMap properties)` : Create SsSurvey with domain, token , custom params and with traslate language code.
 
 #### Public methods
 |Return|Prototype|

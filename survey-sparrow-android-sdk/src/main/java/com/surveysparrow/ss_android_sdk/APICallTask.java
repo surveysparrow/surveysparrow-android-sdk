@@ -13,6 +13,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Consumer;
+
 import com.surveysparrow.ss_android_sdk.SsSurvey.CustomParam;
 
 public class APICallTask extends AsyncTask<String, Void, String> {
@@ -98,7 +100,11 @@ public class APICallTask extends AsyncTask<String, Void, String> {
     @Override
     protected void onPostExecute(String result) {
         // Complete the CompletableFuture when the AsyncTask completes
-        CompletableFuture.completedFuture(result).thenAccept(callback::onResponse);
+        CompletableFuture.completedFuture(result).thenAccept(new Consumer<String>() {
+            public void accept(String result) {
+                callback.onResponse(result);
+            }
+        });
     }
 
     public interface ApiCallback {

@@ -1,7 +1,10 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("maven-publish")
 }
+
+val stringVersionName = "1.0.0"
 
 android {
     namespace = "com.surveysparrow.surveysparrow_android_sdk"
@@ -48,4 +51,21 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("maven"){
+                groupId = "com.surveysparrow"
+                artifactId = "ss-android-sdk"
+                version = stringVersionName
+                pom {
+                    name = "SurveySparrow Android SDK"
+                    description = "SurveySparrow Android SDK enables you to collect feedback from your mobile app. Embed the Classic, Chat & NPS surveys in your Android application seamlessly with few lines of code."
+                    url = "https://github.com/surveysparrow/surveysparrow-android-sdk"
+                }
+            }
+        }
+    }
 }

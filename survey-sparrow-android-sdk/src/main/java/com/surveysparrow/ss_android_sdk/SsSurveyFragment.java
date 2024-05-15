@@ -110,7 +110,7 @@ public final class SsSurveyFragment extends Fragment {
             CustomParam[] customparam = survey.getCustomParams();
             String apiUrl = "https://" + survey.getDomain() + "/sdk/validate-survey/" + survey.getSurveyToken();
             // Create a CompletableFuture for the asynchronous API call
-            CompletableFuture<String> apiCallFuture = new CompletableFuture<>();
+            final CompletableFuture<String> apiCallFuture = new CompletableFuture<>();
 
             APICallTask apiCallTask = new APICallTask(apiUrl, customparam, new APICallTask.ApiCallback() {
                 @Override

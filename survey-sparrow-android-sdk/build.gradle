@@ -1,4 +1,4 @@
-apply plugin: 'com.novoda.bintray-release'
+//apply plugin: 'com.novoda.bintray-release'
 apply plugin: 'com.android.library'
 
 def stringVersionName = '0.4.7'
@@ -21,15 +21,15 @@ android {
     }
 }
 
-publish {
-   userOrg = 'surveysparrow'
-   repoName = 'maven'
-   groupId = 'com.surveysparrow'
-   artifactId = 'ss-android-sdk'
-   publishVersion = stringVersionName
-   desc = 'SurveySparrow Android SDK'
-   website = 'https://github.com/surveysparrow/surveysparrow-android-sdk'
-}
+//publish {
+//   userOrg = 'surveysparrow'
+//   repoName = 'maven'
+//   groupId = 'com.surveysparrow'
+//   artifactId = 'ss-android-sdk'
+//   publishVersion = stringVersionName
+//   desc = 'SurveySparrow Android SDK'
+//   website = 'https://github.com/surveysparrow/surveysparrow-android-sdk'
+//}
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])

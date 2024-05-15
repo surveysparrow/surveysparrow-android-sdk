@@ -203,7 +203,7 @@ class SpotCheckConfig(
 
                         setAppearance(selectedSpotCheck?.get("appearance") as Map<String, Any> ?: mapOf<String, Any>())
                         spotCheckID = selectedSpotCheck?.get("id") as Double
-                        spotCheckContactID = (selectedSpotCheck?.get("spotCheckContact") as Map<String, Any>)?.get("contact_id") as Double
+                        spotCheckContactID = (selectedSpotCheck?.get("spotCheckContact") as Map<String, Any>)?.get("id") as Double
 
 
                         spotCheckURL =

@@ -13,12 +13,12 @@ import android.os.Looper
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardColors
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -38,13 +38,11 @@ class SpotCheckConfig(
     private var lastName: String = "",
     private var phoneNumber: String = "",
     private var variables: Map<String, Any> = mapOf(),
-    location: Map<String, Double> = mapOf()
+    private var customProperties: Map<String, Any> = mapOf(),
 ) {
-    private var latitude = location["latitude"] ?: 0.0
-    private var longitude = location["longitude"] ?: 0.0
-
     var position by mutableStateOf("")
     var spotCheckURL by mutableStateOf("")
+    var triggerToken by mutableStateOf("")
 
     var spotCheckID by mutableDoubleStateOf(0.0)
     var spotCheckContactID by mutableDoubleStateOf(0.0)
@@ -61,6 +59,13 @@ class SpotCheckConfig(
 
     var closeButtonStyle by mutableStateOf<Map<String, String?>>(mapOf())
     private var customEventsSpotChecks by mutableStateOf<List<Map<String, Any?>>>(listOf(mapOf()))
+    var traceId: String = ""
+
+    init {
+        if ( traceId.isEmpty() ) {
+            traceId = generateTraceId()
+        }
+    }
 
     suspend fun sendRequestForTrackScreen(screenName: String): Boolean {
         var isSpotPassed by mutableStateOf(false)
@@ -70,6 +75,7 @@ class SpotCheckConfig(
             val payload = PropertiesRequestPayload(
                 screenName = screenName,
                 variables = variables,
+                customProperties = customProperties,
                 userDetails = UserDetails(
                     email = email,
                     firstName = firstName,
@@ -77,16 +83,13 @@ class SpotCheckConfig(
                     phoneNumber = phoneNumber
                 ),
                 visitor = Visitor(
-                    location = Location(
-                        coords = Coordinates(latitude = latitude, longitude = longitude)
-                    ),
-                    ipAddress = fetchIPAddress(),
                     deviceType = "Mobile",
                     operatingSystem = "Android",
                     screenResolution = getScreenResolution(),
                     currentDate = getCurrentDate(),
                     timezone = TimeZone.getDefault().id
-                )
+                ),
+                traceId = traceId
             )
             customEventsSpotChecks = listOf(mapOf())
             val apiService = RetrofitClient.create("https://${domainName}")
@@ -98,12 +101,13 @@ class SpotCheckConfig(
                 val show: Boolean = response.show
 
                 if (show) {
+                    this.triggerToken = response.triggerToken
                     response.appearance?.let { setAppearance(it) }
                     isSpotPassed = true
                     response.spotCheckId?.also { spotCheckID = it.toDouble() }
                     response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                     spotCheckURL =
-                        "https://$domainName/n/spotcheck/${String.format("%.0f", spotCheckID)}?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}"
+                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
                     return true
                 } else {
                     Log.d(
@@ -134,14 +138,18 @@ class SpotCheckConfig(
                             }
                             val customEvent = condition["customEvent"] as? Map<String, Any>
                             customEventsSpotChecks = listOf(response.toMap())
+                            if(!customEvent.isNullOrEmpty()) {
+                                return false
+                            }
                         }
 
+                        this.triggerToken = response.triggerToken
                         response.appearance?.let { setAppearance(it) }
                         isChecksPassed = true
                         response.spotCheckId?.also { spotCheckID = it.toDouble()}
                         response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                         spotCheckURL =
-                            "https://$domainName/n/spotcheck/${String.format("%.0f", spotCheckID)}?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}"
+                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
 
                         return true
 
@@ -199,15 +207,14 @@ class SpotCheckConfig(
                             val afterDelayDouble = afterDelay?.toDoubleOrNull() ?: 0.0
                             this.afterDelay = afterDelayDouble
                         }
-
-
+                        this.triggerToken = response.triggerToken
                         setAppearance(selectedSpotCheck?.get("appearance") as Map<String, Any> ?: mapOf<String, Any>())
                         spotCheckID = selectedSpotCheck?.get("id") as Double
                         spotCheckContactID = (selectedSpotCheck?.get("spotCheckContact") as Map<String, Any>)?.get("id") as Double
 
 
                         spotCheckURL =
-                            "https://$domainName/n/spotcheck/${String.format("%.0f", spotCheckID)}?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}"
+                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
 
                         return true
 
@@ -254,12 +261,19 @@ class SpotCheckConfig(
                     if (event.containsKey(eventName)) {
                         val spotcheckid = spotCheck["spotCheckId"]
                         val id = spotcheckid ?: spotCheck["id"]
-                        selectedSpotCheckID =  Integer.parseInt(String.format("%.0f", id))
+                        val idDouble = id.toString().toDoubleOrNull()
+                        if (idDouble != null) {
+                            val formattedId = String.format("%.0f", idDouble)
+                            selectedSpotCheckID = Integer.parseInt(formattedId)
+                        } else {
+                            selectedSpotCheckID = -1
+                        }
                         if (selectedSpotCheckID != Int.MAX_VALUE) {
 
                             val payload = EventRequestPayload(
                                 screenName = screenName,
                                 variables = variables,
+                                customProperties = customProperties,
                                 userDetails = UserDetails(
                                     email = email,
                                     firstName = firstName,
@@ -267,13 +281,6 @@ class SpotCheckConfig(
                                     phoneNumber = phoneNumber
                                 ),
                                 visitor = Visitor(
-                                    location = Location(
-                                        coords = Coordinates(
-                                            latitude = latitude,
-                                            longitude = longitude
-                                        )
-                                    ),
-                                    ipAddress = fetchIPAddress(),
                                     deviceType = "Mobile",
                                     operatingSystem = "Android",
                                     screenResolution = getScreenResolution(),
@@ -281,7 +288,8 @@ class SpotCheckConfig(
                                     timezone = TimeZone.getDefault().id
                                 ),
                                 spotCheckId = selectedSpotCheckID,
-                                eventTrigger = mapOf("customEvent" to event)
+                                eventTrigger = mapOf("customEvent" to event),
+                                traceId = traceId
                             )
 
                             val apiService = RetrofitClient.create("https://${domainName}")
@@ -292,6 +300,7 @@ class SpotCheckConfig(
                                 val show: Boolean = response.show == true
 
                                 if (show) {
+                                    this.triggerToken = response.triggerToken
                                     response.appearance?.let { setAppearance(it) }
                                     isSpotPassed = true
                                     response.spotCheckId?.also { spotCheckID = it.toDouble() }
@@ -299,7 +308,7 @@ class SpotCheckConfig(
                                         spotCheckContactID = it.toDouble()
                                     }
                                     spotCheckURL =
-                                        "https://$domainName/n/spotcheck/${String.format("%.0f", spotCheckID)}?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}"
+                                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
                                     return true
                                 } else {
                                     Log.d(
@@ -341,6 +350,7 @@ class SpotCheckConfig(
                                             }
                                         }
 
+                                        this.triggerToken = response.triggerToken
                                         response.appearance?.let { setAppearance(it) }
                                         isChecksPassed = true
                                         response.spotCheckId?.also { spotCheckID = it.toDouble() }
@@ -348,7 +358,7 @@ class SpotCheckConfig(
                                             spotCheckContactID = it.toDouble()
                                         }
                                         spotCheckURL =
-                                            "https://$domainName/n/spotcheck/${String.format("%.0f", spotCheckID)}?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}"
+                                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
 
                                         return true
                                     } else {
@@ -385,17 +395,6 @@ class SpotCheckConfig(
 
     fun openSpot() {
         isVisible = true
-    }
-
-    private suspend fun fetchIPAddress(): String? {
-        val apiService = IpAddressClient.create()
-        return try {
-            val response = apiService.fetchIPAddress()
-            response.ip
-        } catch (e: Exception) {
-            Log.e("Error fetching IP address", e.message, e)
-            null
-        }
     }
 
     private suspend fun getScreenResolution(): ScreenResolution {
@@ -438,15 +437,18 @@ class SpotCheckConfig(
         bannerImage?.let { banner ->
             this.isBannerImageOn = banner["enabled"] as? Boolean ?: false
         }
-
     }
 }
 
 suspend fun closeSpotCheck(config: SpotCheckConfig) {
     try {
         val apiService = RetrofitClient.create("https://${config.domainName}")
+        val payload = DismissPayload(
+            traceId = config.traceId,
+            triggerToken = config.triggerToken
+        )
         val response =
-            apiService.closeSpotCheck(spotCheckContactID = String.format("%.0f", config.spotCheckContactID))
+            apiService.closeSpotCheck(spotCheckContactID = String.format("%.0f", config.spotCheckContactID), payload = payload)
         if (response.success == true) {
             Log.i("SPOT-CHECK", "CloseSpotCheck: Success")
             config.spotCheckID = 0.0
@@ -461,6 +463,12 @@ suspend fun closeSpotCheck(config: SpotCheckConfig) {
         Log.i("SPOT-CHECK", "$e")
     }
 
+}
+
+fun generateTraceId(): String {
+    val uuid = UUID.randomUUID()
+    val timestamp = System.currentTimeMillis()
+    return "$uuid-$timestamp"
 }
 
 suspend fun trackScreen(screen: String, config: SpotCheckConfig) {
@@ -488,6 +496,7 @@ suspend fun trackEvent(screen: String, event: Map<String, Any>, config: SpotChec
 @Composable
 fun SpotCheck(config: SpotCheckConfig) {
     var isButtonClicked by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
 
     val colorValue = config.closeButtonStyle["ctaButton"] as? String ?: "#000000"
     val minHeight = minOf(config.currentQuestionHeight.dp, (config.maxHeight * LocalConfiguration.current.screenHeightDp).dp)
@@ -500,11 +509,12 @@ fun SpotCheck(config: SpotCheckConfig) {
         }
     }
 
-    if(config.isVisible) {
+    if (config.isVisible) {
         Surface(
             color = Color.Black.copy(alpha = 0.3f),
             modifier = Modifier.fillMaxSize()
         ) {}
+
         Column(
             verticalArrangement = when (config.position) {
                 "top" -> Arrangement.Top
@@ -516,62 +526,89 @@ fun SpotCheck(config: SpotCheckConfig) {
             Box(
                 modifier = if (config.isFullScreenMode) {
                     Modifier.height(LocalConfiguration.current.screenHeightDp.dp)
+//                        .background(Color.Transparent)
                 } else {
                     Modifier.height(finalHeight)
+//                        .background(Color.Transparent)
                 }
             ) {
-                AndroidView(
-                    modifier = Modifier
-                        .fillMaxSize(),
-                    factory = { context ->
-                        WebView(context).apply {
-                            settings.javaScriptEnabled = true
-                            settings.domStorageEnabled = true
-                            settings.loadWithOverviewMode = true
-                            settings.useWideViewPort = true
-                            settings.setSupportZoom(true)
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                            addJavascriptInterface(object : Any() {
-                                @JavascriptInterface
-                                fun onMessageReceive(message: String) {
-                                    val gson = Gson()
-                                    val spotCheckData: SpotCheckData =
-                                        gson.fromJson(message, SpotCheckData::class.java)
-                                    if(spotCheckData.type == "spotCheckData"){
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { context ->
+                            WebView(context).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                settings.loadWithOverviewMode = true
+                                settings.useWideViewPort = true
+                                settings.setSupportZoom(true)
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                                addJavascriptInterface(object : Any() {
+                                    @JavascriptInterface
+                                    fun onMessageReceive(message: String) {
+                                        val gson = Gson()
+                                        val spotCheckData: SpotCheckData =
+                                            gson.fromJson(message, SpotCheckData::class.java)
+                                        if (spotCheckData.type == "spotCheckData") {
                                             config.currentQuestionHeight =
                                                 spotCheckData.data.currentQuestionSize.height
                                         }
-                                    if(spotCheckData.type == "surveyCompleted"){
-                                        config.onClose()
+                                        if (spotCheckData.type == "surveyCompleted") {
+                                            config.onClose()
+                                        }
+                                    }
+                                }, "Android")
+
+                                webViewClient = object : WebViewClient() {
+                                    override fun onPageFinished(view: WebView?, url: String?) {
+                                        super.onPageFinished(view, url)
+                                        isLoading = false
                                     }
                                 }
-                            }, "Android")
-                            loadUrl(config.spotCheckURL)
+
+                                loadUrl(config.spotCheckURL)
+                            }
+                        }
+                    )
+                    if (isLoading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.3f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
                         }
                     }
-                )
-                if (config.currentQuestionHeight != 0.0 && config.isCloseButtonEnabled) {
-                    IconButton(
-                        onClick = {
-                            isButtonClicked = true
-                            config.onClose()
-                        },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color(parseColor(colorValue)),
-                            modifier = Modifier.size(21.dp)
-                        )
+
+                    if (config.currentQuestionHeight != 0.0 && config.isCloseButtonEnabled) {
+                        IconButton(
+                            onClick = {
+                                isButtonClicked = true
+                                config.onClose()
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = Color(parseColor(colorValue)),
+                                modifier = Modifier.size(21.dp)
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+    else {
+        Box(
+            modifier = Modifier.background(Color.Transparent).height(0.dp).width(0.dp)
+        )
     }
 }

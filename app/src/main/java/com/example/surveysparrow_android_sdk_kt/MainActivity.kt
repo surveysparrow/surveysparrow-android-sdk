@@ -52,21 +52,18 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
 @Composable
 fun Main() {
     val spotCheckConfig = remember {
         SpotCheckConfig(
             email = "gokulkrishna.raju@surveysparrow.com",
-            domainName = "rgk.ap.ngrok.io",
-            targetToken = "tar-gK7JFwnNB4JxLttMETCjYy",
+            domainName = "sushmitha.datasparrow.com",
+            targetToken = "tar-rpfpo2q6MqMc9QWZRdgLAf",
             firstName = "gokulkrishna",
             lastName = "raju",
             phoneNumber = "6383846825",
-            location = mapOf(
-                "latitude" to 12.947021473352041,
-                "longitude" to 80.23236112554345
-            )
+            variables = mapOf(),
+            customProperties = mapOf()
         )
     }
 

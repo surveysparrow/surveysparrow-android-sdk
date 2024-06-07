@@ -63,12 +63,15 @@ interface ApiService {
 
     @PUT("/api/internal/spotcheck/dismiss/{spotCheckContactID}")
     suspend fun closeSpotCheck(
-        @Path("spotCheckContactID") spotCheckContactID: String
+        @Path("spotCheckContactID") spotCheckContactID: String,
+        @Body payload: DismissPayload
     ): CloseSpotCheckResponce
-
-    @GET("?format=json")
-    suspend fun fetchIPAddress(): IP
 }
+
+data class DismissPayload (
+    val traceId: String,
+    val triggerToken: String
+)
 
 class ErrorInterceptor : Interceptor {
     @Throws(IOException::class)
@@ -84,14 +87,15 @@ class ErrorInterceptor : Interceptor {
     }
 }
 
-
 data class EventRequestPayload(
     val screenName: String?,
     val variables: Map<String, Any>,
+    val customProperties: Map<String, Any>,
     val userDetails: UserDetails,
     val visitor: Visitor,
     val spotCheckId: Int,
-    val eventTrigger: Map<String, Map<String, Any>>
+    val eventTrigger: Map<String, Map<String, Any>>,
+    val traceId: String
 )
 
 data class EventApiResponse(
@@ -101,14 +105,17 @@ data class EventApiResponse(
     val spotCheckContactId: String?,
     val appearance: Map<String, Any>?,
     val checkCondition: Map<String, Any>?,
-    val show: Boolean?
+    val show: Boolean?,
+    val triggerToken: String
 )
 
 data class PropertiesRequestPayload(
     val screenName: String?,
     val variables: Map<String, Any>,
     val userDetails: UserDetails,
-    val visitor: Visitor
+    val visitor: Visitor,
+    val customProperties: Map<String, Any>,
+    val traceId: String
 )
 
 data class PropertiesApiResponse(
@@ -120,7 +127,8 @@ data class PropertiesApiResponse(
     val checkPassed: Boolean?,
     val checkCondition: Map<String, Any>?,
     val multiShow: Boolean?,
-    val resultantSpotCheck: List<Map<String, Any>?>?
+    val resultantSpotCheck: List<Map<String, Any>?>?,
+    val triggerToken: String
 )
 
 fun PropertiesApiResponse.toMap(): Map<String, Any?> {
@@ -145,25 +153,11 @@ data class UserDetails(
 )
 
 data class Visitor(
-    val location: Location,
-    val ipAddress: String?,
     val deviceType: String,
     val operatingSystem: String,
     val screenResolution: ScreenResolution,
     val currentDate: String,
     val timezone: String
-)
-
-data class Location(
-    val coords: Coordinates
-)
-data class IP(
-    val ip: String
-)
-
-data class Coordinates(
-    val latitude: Double,
-    val longitude: Double
 )
 
 data class ScreenResolution(

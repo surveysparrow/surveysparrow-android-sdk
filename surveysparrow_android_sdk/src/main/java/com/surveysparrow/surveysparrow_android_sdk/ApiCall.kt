@@ -33,21 +33,6 @@ object RetrofitClient {
     }
 }
 
-object IpAddressClient {
-    private const val BASE_URL = "https://api.ipify.org/"
-
-    fun create(): ApiService {
-        val client = OkHttpClient.Builder().build()
-        val retrofit = Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        return retrofit.create(ApiService::class.java)
-    }
-}
-
 interface ApiService {
     @POST("/api/internal/spotcheck/widget/{targetToken}/properties")
     suspend fun fetchProperties(
@@ -60,18 +45,7 @@ interface ApiService {
         @Path("targetToken") targetToken: String,
         @Body payload: EventRequestPayload
     ): EventApiResponse
-
-    @PUT("/api/internal/spotcheck/dismiss/{spotCheckContactID}")
-    suspend fun closeSpotCheck(
-        @Path("spotCheckContactID") spotCheckContactID: String,
-        @Body payload: DismissPayload
-    ): CloseSpotCheckResponce
 }
-
-data class DismissPayload (
-    val traceId: String,
-    val triggerToken: String
-)
 
 class ErrorInterceptor : Interceptor {
     @Throws(IOException::class)
@@ -176,9 +150,4 @@ data class SpotCheckDataDetails(
 
 data class CurrentQuestionSize(
     val height: Double
-)
-
-data class CloseSpotCheckResponce(
-    val success: Boolean?,
-    val message: String?
 )

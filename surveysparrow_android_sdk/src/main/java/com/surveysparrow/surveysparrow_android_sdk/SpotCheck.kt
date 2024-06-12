@@ -7,7 +7,6 @@ import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.util.*
 import android.content.res.Resources
-import android.graphics.Color.parseColor
 import android.os.Handler
 import android.os.Looper
 import android.view.ViewGroup
@@ -16,11 +15,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -29,6 +24,101 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+@Composable
+fun SpotCheck(config: SpotCheckConfig) {
+    var isLoading by remember { mutableStateOf(true) }
+
+    val minHeight = minOf(config.currentQuestionHeight.dp, (config.maxHeight * LocalConfiguration.current.screenHeightDp).dp)
+    val additionalHeight = if (config.isBannerImageOn) 200.dp else 0.dp
+    val finalHeight = minHeight + additionalHeight
+
+    if (config.isVisible) {
+        Surface(
+            color = Color.Black.copy(alpha = 0.3f),
+            modifier = Modifier.fillMaxSize()
+        ) {}
+
+        Column(
+            verticalArrangement = when (config.position) {
+                "top" -> Arrangement.Top
+                "center" -> Arrangement.Center
+                "bottom" -> Arrangement.Bottom
+                else -> Arrangement.Center
+            },
+        ) {
+            Box(
+                modifier = if (config.isFullScreenMode) {
+                    Modifier.height(LocalConfiguration.current.screenHeightDp.dp)
+                } else {
+                    Modifier.height(finalHeight)
+                }
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { context ->
+                            WebView(context).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                settings.loadWithOverviewMode = true
+                                settings.useWideViewPort = true
+                                settings.setSupportZoom(true)
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                                addJavascriptInterface(object : Any() {
+                                    @JavascriptInterface
+                                    fun onMessageReceive(message: String) {
+                                        val gson = Gson()
+                                        val spotCheckData: SpotCheckData =
+                                            gson.fromJson(message, SpotCheckData::class.java)
+                                        if (spotCheckData.type == "spotCheckData") {
+                                            config.currentQuestionHeight =
+                                                spotCheckData.data.currentQuestionSize.height
+                                        }
+                                        if (spotCheckData.type == "surveyCompleted") {
+                                            config.onClose()
+                                        }
+                                        if (spotCheckData.type == "closeModal") {
+                                            config.onClose()
+                                        }
+                                    }
+                                }, "Android")
+
+                                webViewClient = object : WebViewClient() {
+                                    override fun onPageFinished(view: WebView?, url: String?) {
+                                        super.onPageFinished(view, url)
+                                        isLoading = false
+                                    }
+                                }
+
+                                loadUrl(config.spotCheckURL)
+                            }
+                        }
+                    )
+                    if (isLoading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.3f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else {
+        Box(
+            modifier = Modifier.background(Color.Transparent).height(0.dp).width(0.dp)
+        )
+    }
+}
+
 
 class SpotCheckConfig(
     private var email: String,
@@ -42,10 +132,10 @@ class SpotCheckConfig(
 ) {
     var position by mutableStateOf("")
     var spotCheckURL by mutableStateOf("")
-    var triggerToken by mutableStateOf("")
+    private var triggerToken by mutableStateOf("")
 
-    var spotCheckID by mutableDoubleStateOf(0.0)
-    var spotCheckContactID by mutableDoubleStateOf(0.0)
+    private var spotCheckID by mutableDoubleStateOf(0.0)
+    private var spotCheckContactID by mutableDoubleStateOf(0.0)
     private var selectedSpotCheckID by mutableIntStateOf(0)
 
     var maxHeight by mutableDoubleStateOf(0.5)
@@ -53,13 +143,11 @@ class SpotCheckConfig(
     var currentQuestionHeight by mutableDoubleStateOf(0.0)
 
     var isVisible by mutableStateOf(false)
-    var isCloseButtonEnabled by mutableStateOf(false)
     var isFullScreenMode by mutableStateOf(false)
     var isBannerImageOn by mutableStateOf(false)
 
-    var closeButtonStyle by mutableStateOf<Map<String, String?>>(mapOf())
     private var customEventsSpotChecks by mutableStateOf<List<Map<String, Any?>>>(listOf(mapOf()))
-    var traceId: String = ""
+    private var traceId: String = ""
 
     init {
         if ( traceId.isEmpty() ) {
@@ -207,7 +295,7 @@ class SpotCheckConfig(
                             val afterDelayDouble = afterDelay?.toDoubleOrNull() ?: 0.0
                             this.afterDelay = afterDelayDouble
                         }
-                        this.triggerToken = response.triggerToken
+                        this.triggerToken = selectedSpotCheck?.get("triggerToken") as String
                         setAppearance(selectedSpotCheck?.get("appearance") as Map<String, Any> ?: mapOf<String, Any>())
                         spotCheckID = selectedSpotCheck?.get("id") as Double
                         spotCheckContactID = (selectedSpotCheck?.get("spotCheckContact") as Map<String, Any>)?.get("id") as Double
@@ -391,6 +479,11 @@ class SpotCheckConfig(
 
     fun onClose() {
         isVisible = false
+        spotCheckID = 0.0
+        position = ""
+        currentQuestionHeight = 0.0
+        spotCheckContactID = 0.0
+        spotCheckURL = ""
     }
 
     fun openSpot() {
@@ -423,13 +516,9 @@ class SpotCheckConfig(
             else if (pos == "bottom_full") this.position = "bottom"
         }
 
-        this.isCloseButtonEnabled = isCloseButtonEnabled ?: false
-
         val mxHeight = cardProp?.get("maxHeight") as? Double
             ?: (cardProp?.get("maxHeight") as? String)?.toDouble() ?: 1.0
         this.maxHeight = mxHeight / 100
-
-        overrides?.let { closeButtonStyle = it }
 
         this.isFullScreenMode = appearance["mode"] as? String == "fullScreen"
 
@@ -438,31 +527,6 @@ class SpotCheckConfig(
             this.isBannerImageOn = banner["enabled"] as? Boolean ?: false
         }
     }
-}
-
-suspend fun closeSpotCheck(config: SpotCheckConfig) {
-    try {
-        val apiService = RetrofitClient.create("https://${config.domainName}")
-        val payload = DismissPayload(
-            traceId = config.traceId,
-            triggerToken = config.triggerToken
-        )
-        val response =
-            apiService.closeSpotCheck(spotCheckContactID = String.format("%.0f", config.spotCheckContactID), payload = payload)
-        if (response.success == true) {
-            Log.i("SPOT-CHECK", "CloseSpotCheck: Success")
-            config.spotCheckID = 0.0
-            config.position = ""
-            config.currentQuestionHeight = 0.0
-            config.isCloseButtonEnabled = false
-            config.closeButtonStyle = mapOf()
-            config.spotCheckContactID = 0.0
-            config.spotCheckURL = ""
-        }
-    } catch (e: Exception) {
-        Log.i("SPOT-CHECK", "$e")
-    }
-
 }
 
 fun generateTraceId(): String {
@@ -491,124 +555,4 @@ suspend fun trackEvent(screen: String, event: Map<String, Any>, config: SpotChec
         }, delayMillis)
     }
     Log.i("TrackEvent", config.isVisible.toString())
-}
-
-@Composable
-fun SpotCheck(config: SpotCheckConfig) {
-    var isButtonClicked by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    val colorValue = config.closeButtonStyle["ctaButton"] as? String ?: "#000000"
-    val minHeight = minOf(config.currentQuestionHeight.dp, (config.maxHeight * LocalConfiguration.current.screenHeightDp).dp)
-    val additionalHeight = if (config.isBannerImageOn) 200.dp else 0.dp
-    val finalHeight = minHeight + additionalHeight
-
-    if (isButtonClicked) {
-        LaunchedEffect(true) {
-            closeSpotCheck(config)
-        }
-    }
-
-    if (config.isVisible) {
-        Surface(
-            color = Color.Black.copy(alpha = 0.3f),
-            modifier = Modifier.fillMaxSize()
-        ) {}
-
-        Column(
-            verticalArrangement = when (config.position) {
-                "top" -> Arrangement.Top
-                "center" -> Arrangement.Center
-                "bottom" -> Arrangement.Bottom
-                else -> Arrangement.Center
-            },
-        ) {
-            Box(
-                modifier = if (config.isFullScreenMode) {
-                    Modifier.height(LocalConfiguration.current.screenHeightDp.dp)
-//                        .background(Color.Transparent)
-                } else {
-                    Modifier.height(finalHeight)
-//                        .background(Color.Transparent)
-                }
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    AndroidView(
-                        modifier = Modifier.fillMaxSize(),
-                        factory = { context ->
-                            WebView(context).apply {
-                                settings.javaScriptEnabled = true
-                                settings.domStorageEnabled = true
-                                settings.loadWithOverviewMode = true
-                                settings.useWideViewPort = true
-                                settings.setSupportZoom(true)
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                                addJavascriptInterface(object : Any() {
-                                    @JavascriptInterface
-                                    fun onMessageReceive(message: String) {
-                                        val gson = Gson()
-                                        val spotCheckData: SpotCheckData =
-                                            gson.fromJson(message, SpotCheckData::class.java)
-                                        if (spotCheckData.type == "spotCheckData") {
-                                            config.currentQuestionHeight =
-                                                spotCheckData.data.currentQuestionSize.height
-                                        }
-                                        if (spotCheckData.type == "surveyCompleted") {
-                                            config.onClose()
-                                        }
-                                    }
-                                }, "Android")
-
-                                webViewClient = object : WebViewClient() {
-                                    override fun onPageFinished(view: WebView?, url: String?) {
-                                        super.onPageFinished(view, url)
-                                        isLoading = false
-                                    }
-                                }
-
-                                loadUrl(config.spotCheckURL)
-                            }
-                        }
-                    )
-                    if (isLoading) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.3f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-
-                    if (config.currentQuestionHeight != 0.0 && config.isCloseButtonEnabled) {
-                        IconButton(
-                            onClick = {
-                                isButtonClicked = true
-                                config.onClose()
-                            },
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = Color(parseColor(colorValue)),
-                                modifier = Modifier.size(21.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else {
-        Box(
-            modifier = Modifier.background(Color.Transparent).height(0.dp).width(0.dp)
-        )
-    }
 }

@@ -7,7 +7,6 @@ import okhttp3.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
-import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -71,7 +70,7 @@ data class EventRequestPayload(
     val screenName: String?,
     val variables: Map<String, Any>,
     val customProperties: Map<String, Any>,
-    val userDetails: UserDetails,
+    val userDetails: HashMap<String, String>,
     val visitor: Visitor,
     val spotCheckId: Int,
     val eventTrigger: Map<String, Map<String, Any>>,
@@ -92,7 +91,7 @@ data class EventApiResponse(
 data class PropertiesRequestPayload(
     val screenName: String?,
     val variables: Map<String, Any>,
-    val userDetails: UserDetails,
+    val userDetails: HashMap<String, String>,
     val visitor: Visitor,
     val customProperties: Map<String, Any>,
     val traceId: String
@@ -125,14 +124,6 @@ fun PropertiesApiResponse.toMap(): Map<String, Any?> {
         "resultantSpotCheck" to this.resultantSpotCheck
     )
 }
-
-public data class UserDetails(
-    val email: String? = null,
-    val firstName: String? = null,
-    val lastName: String? = null,
-    val mobile: String? = null,
-    var uuid: String? = null
-)
 
 data class Visitor(
     val deviceType: String,

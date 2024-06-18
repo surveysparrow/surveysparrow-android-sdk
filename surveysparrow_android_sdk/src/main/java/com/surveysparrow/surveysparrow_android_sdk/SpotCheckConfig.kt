@@ -18,7 +18,7 @@ import java.util.TimeZone
 class SpotCheckConfig(
     var domainName: String,
     var targetToken: String,
-    private var userDetails: UserDetails,
+    private var userDetails: HashMap<String, String>,
     private var variables: Map<String, Any> = mapOf(),
     private var customProperties: Map<String, Any> = mapOf(),
     var preferences: SharedPreferences? = null
@@ -54,8 +54,8 @@ class SpotCheckConfig(
         var isSpotPassed by mutableStateOf(false)
         var isChecksPassed by mutableStateOf(false)
 
-        if ( preferences != null && userDetails.uuid == null && userDetails.email == null && userDetails.mobile == null ) {
-            userDetails.uuid = preferences!!.getString("SurveySparrowUUID" , null)
+        if ( preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null ) {
+            this.preferences!!.getString("SurveySparrowUUID" , null).also { userDetails["uuid"] = it as String }
         }
 
         try {
@@ -258,8 +258,8 @@ class SpotCheckConfig(
                         }
                         if (selectedSpotCheckID != Int.MAX_VALUE) {
 
-                            if ( preferences != null && userDetails.uuid == null && userDetails.email == null && userDetails.mobile == null ) {
-                                userDetails.uuid = preferences!!.getString("SurveySparrowUUID" , null)
+                            if ( preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null ) {
+                                this.preferences!!.getString("SurveySparrowUUID" , null).also { userDetails["uuid"] = it as String }
                             }
 
                             val payload = EventRequestPayload(

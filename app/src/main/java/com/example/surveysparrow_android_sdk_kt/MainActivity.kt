@@ -22,7 +22,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 
 import com.surveysparrow.surveysparrow_android_sdk.SpotCheckConfig
-import com.surveysparrow.surveysparrow_android_sdk.UserDetails
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,8 +46,8 @@ fun Main() {
         SpotCheckConfig(
             domainName = "rgk.ap.ngrok.io",
             targetToken = "tar-oZU5qvKuy63beDruYv3Dto",
-            userDetails = UserDetails(
-                mobile = "6383846825"
+            userDetails = hashMapOf(
+                "mobile" to "6383846825",
             ),
             variables = mapOf(),
             customProperties = mapOf(),

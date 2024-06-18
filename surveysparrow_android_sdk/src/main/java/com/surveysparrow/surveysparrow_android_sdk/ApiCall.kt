@@ -45,6 +45,12 @@ interface ApiService {
         @Path("targetToken") targetToken: String,
         @Body payload: EventRequestPayload
     ): EventApiResponse
+
+    @PUT("/api/internal/spotcheck/dismiss/{spotCheckContactID}")
+    suspend fun closeSpotCheck(
+        @Path("spotCheckContactID") spotCheckContactID: String,
+        @Body payload: DismissPayload
+    ): CloseSpotCheckResponce
 }
 
 class ErrorInterceptor : Interceptor {
@@ -102,7 +108,8 @@ data class PropertiesApiResponse(
     val checkCondition: Map<String, Any>?,
     val multiShow: Boolean?,
     val resultantSpotCheck: List<Map<String, Any>?>?,
-    val triggerToken: String
+    val triggerToken: String,
+    val uuid: String?
 )
 
 fun PropertiesApiResponse.toMap(): Map<String, Any?> {
@@ -119,11 +126,12 @@ fun PropertiesApiResponse.toMap(): Map<String, Any?> {
     )
 }
 
-data class UserDetails(
-    val email: String,
-    val firstName: String,
-    val lastName: String,
-    val phoneNumber: String
+public data class UserDetails(
+    val email: String? = null,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val mobile: String? = null,
+    var uuid: String? = null
 )
 
 data class Visitor(
@@ -150,4 +158,14 @@ data class SpotCheckDataDetails(
 
 data class CurrentQuestionSize(
     val height: Double
+)
+
+data class DismissPayload (
+    val traceId: String,
+    val triggerToken: String
+)
+
+data class CloseSpotCheckResponce(
+    val success: Boolean?,
+    val message: String?
 )

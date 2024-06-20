@@ -4,7 +4,7 @@ plugins {
     id("maven-publish")
 }
 
-val stringVersionName = "1.0.0-beta.3"
+val stringVersionName = "1.0.0-beta.4"
 
 android {
     namespace = "com.surveysparrow.surveysparrow_android_sdk"
@@ -56,8 +56,8 @@ afterEvaluate {
     publishing {
         publications {
             create<MavenPublication>("maven"){
-                groupId = "com.ss"
-                artifactId = "surveysparrow-android-sdk"
+                groupId = "com.surveysparrow"
+                artifactId = "ss-android-sdk"
                 version = stringVersionName
                 pom {
                     name = "SurveySparrow Android SDK"

@@ -54,6 +54,8 @@ class SpotCheckConfig(
         var isSpotPassed by mutableStateOf(false)
         var isChecksPassed by mutableStateOf(false)
 
+        Log.d("SpotCheck", "sendRequestForTrackScreen: ")
+
         if ( preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null ) {
             this.preferences!!.getString("SurveySparrowUUID" , null).also { userDetails["uuid"] = it as String }
         }

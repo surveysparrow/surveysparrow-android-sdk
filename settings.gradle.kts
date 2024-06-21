@@ -14,6 +14,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "surveysparrow_android_sdk_kt"
-include(":app")
+rootProject.name = "surveysparrow-android-sdk"
+include(":ExampleApp")
 include(":surveysparrow_android_sdk")

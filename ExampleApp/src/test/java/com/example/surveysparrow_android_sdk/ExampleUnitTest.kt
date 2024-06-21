@@ -1,4 +1,4 @@
-package com.example.surveysparrow_android_sdk_kt
+package com.example.surveysparrow_android_sdk
 
 import org.junit.Test
 

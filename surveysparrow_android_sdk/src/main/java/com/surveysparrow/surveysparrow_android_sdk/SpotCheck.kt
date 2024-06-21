@@ -159,6 +159,8 @@ suspend fun trackScreen(screen: String, config: SpotCheckConfig) {
             config.openSpot()
             Log.i("TrackScreen", config.isVisible.toString())
         }, delayMillis)
+    }else {
+        Log.i("TrackScreen", "Failed")
     }
 }
 

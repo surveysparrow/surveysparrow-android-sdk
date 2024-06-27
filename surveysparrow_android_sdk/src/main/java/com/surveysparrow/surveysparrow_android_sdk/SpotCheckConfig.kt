@@ -54,10 +54,13 @@ class SpotCheckConfig(
         var isSpotPassed by mutableStateOf(false)
         var isChecksPassed by mutableStateOf(false)
 
-        Log.d("SpotCheck", "sendRequestForTrackScreen: ")
-
-        if ( preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null ) {
-            this.preferences!!.getString("SurveySparrowUUID" , null).also { userDetails["uuid"] = it as String }
+        if ( this.preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null ) {
+            this.preferences?.getString("SurveySparrowUUID" , null).also {
+               val tuuid = it ;
+               if(!tuuid.isNullOrEmpty()) {
+                   userDetails["uuid"] = tuuid.toString()
+               }
+            }
         }
 
         try {
@@ -80,7 +83,7 @@ class SpotCheckConfig(
             val response = apiService.fetchProperties(targetToken, payload)
             Log.i("sendRequestForTrackScreen", response.toString())
 
-            if (preferences != null){
+            if (preferences != null && response.uuid != null){
                 val editor = preferences!!.edit()
                 editor.putString("SurveySparrowUUID", response.uuid)
                 editor.apply()
@@ -260,8 +263,13 @@ class SpotCheckConfig(
                         }
                         if (selectedSpotCheckID != Int.MAX_VALUE) {
 
-                            if ( preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null ) {
-                                this.preferences!!.getString("SurveySparrowUUID" , null).also { userDetails["uuid"] = it as String }
+                            if ( this.preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null ) {
+                                this.preferences?.getString("SurveySparrowUUID" , null).also {
+                                    val tuuid = it ;
+                                    if(!tuuid.isNullOrEmpty()) {
+                                        userDetails["uuid"] = tuuid.toString()
+                                    }
+                                }
                             }
 
                             val payload = EventRequestPayload(

@@ -85,7 +85,8 @@ data class EventApiResponse(
     val appearance: Map<String, Any>?,
     val checkCondition: Map<String, Any>?,
     val show: Boolean?,
-    val triggerToken: String
+    val triggerToken: String,
+    val reason: String?
 )
 
 data class PropertiesRequestPayload(
@@ -108,7 +109,8 @@ data class PropertiesApiResponse(
     val multiShow: Boolean?,
     val resultantSpotCheck: List<Map<String, Any>?>?,
     val triggerToken: String,
-    val uuid: String?
+    val uuid: String?,
+    val reason: String?
 )
 
 fun PropertiesApiResponse.toMap(): Map<String, Any?> {

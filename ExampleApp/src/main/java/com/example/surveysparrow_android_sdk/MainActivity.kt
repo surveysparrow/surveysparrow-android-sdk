@@ -64,14 +64,12 @@ fun Main() {
 
     val spotCheckConfig = remember {
         SpotCheckConfig(
-            domainName = "gokul-spot.datasparrow.com",
-            targetToken = "tar-pzv1GxZxWKJk7zJJbYSPyW",
-            userDetails = hashMapOf(
-                "mobile" to "6383846825",
-            ),
+            domainName = "<your-Domain>",
+            targetToken = "<generated-token>",
+            userDetails = hashMapOf(),
             variables = mapOf(),
             customProperties = mapOf(),
-            preferences = context.getSharedPreferences("spotcheck", Context.MODE_PRIVATE)
+            preferences = context.getSharedPreferences("spotcheck", Context.MODE_PRIVATE),
         )
     }
 

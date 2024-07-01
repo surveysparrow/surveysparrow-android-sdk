@@ -1,3 +1,5 @@
+include(":app")
+rootProject.name=("SS Simple")
 
 pluginManagement {
     repositories {
@@ -14,7 +16,3 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") }
     }
 }
-
-rootProject.name = "surveysparrow-android-sdk"
-include(":ExampleApp")
-include(":surveysparrow_android_sdk")

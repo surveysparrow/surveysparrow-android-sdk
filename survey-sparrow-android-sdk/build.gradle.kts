@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.surveysparrow.surveysparrow_android_sdk"
+    namespace = "com.surveysparrow.ss_android_sdk"
     compileSdk = 34
 
     defaultConfig {
@@ -40,13 +40,13 @@ android {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'androidx.appcompat:appcompat:1.2.0-rc01'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+
+    implementation("androidx.appcompat:appcompat:1.2.0-rc01")
+    implementation("androidx.legacy:legacy-support-v4:1.0.0")
+    implementation("androidx.constraintlayout:constraintlayout:1.1.3")
+    testImplementation("junit:junit:4.12")
+    androidTestImplementation("androidx.test.ext:junit:1.1.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.2.0")
 }
 
 publishing {

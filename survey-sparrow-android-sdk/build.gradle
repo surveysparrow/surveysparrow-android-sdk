@@ -1,34 +1,42 @@
-apply plugin: 'com.novoda.bintray-release'
-apply plugin: 'com.android.library'
-
-def stringVersionName = '0.5.2-beta.3'
-
-android {
-    compileSdkVersion 33
-    buildToolsVersion "33.0.0"
-    defaultConfig {
-        minSdkVersion 24
-        targetSdkVersion 33
-        versionCode 1
-        versionName stringVersionName
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-    }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
+plugins {
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
+    id("maven-publish")
 }
 
-publish {
-   userOrg = 'surveysparrow'
-   repoName = 'maven'
-   groupId = 'com.surveysparrow'
-   artifactId = 'ss-android-sdk'
-   publishVersion = stringVersionName
-   desc = 'SurveySparrow Android SDK'
-   website = 'https://github.com/surveysparrow/surveysparrow-android-sdk'
+android {
+    namespace = "com.surveysparrow.surveysparrow_android_sdk"
+    compileSdk = 34
+
+    defaultConfig {
+        minSdk = 24
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro"
+            )
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+    buildFeatures {
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.1"
+    }
 }
 
 dependencies {
@@ -39,4 +47,14 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+}
+
+publishing {
+    publications {
+        afterEvaluate {
+            register<MavenPublication>("release") {
+                from(components["release"])
+            }
+        }
+    }
 }

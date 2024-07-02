@@ -101,6 +101,11 @@ class SpotCheckConfig(
                     response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                     spotCheckURL =
                         "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                    variables.forEach { (key, value) ->
+                        spotCheckURL = "$spotCheckURL&$key=$value"
+                    }
+                    
+
                     return true
                 } else {
                     Log.d(
@@ -142,6 +147,10 @@ class SpotCheckConfig(
                         response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                         spotCheckURL =
                             "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                        variables.forEach { (key, value) ->
+                            spotCheckURL = "$spotCheckURL&$key=$value"
+                        }
+                        
 
                         return true
 
@@ -207,6 +216,10 @@ class SpotCheckConfig(
 
                         spotCheckURL =
                             "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                        variables.forEach { (key, value) ->
+                            spotCheckURL = "$spotCheckURL&$key=$value"
+                        }
+                        
 
                         return true
 
@@ -306,6 +319,11 @@ class SpotCheckConfig(
                                     }
                                     spotCheckURL =
                                         "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                                    variables.forEach { (key, value) ->
+                                        spotCheckURL = "$spotCheckURL&$key=$value"
+                                    }
+                                    
+
                                     return true
                                 } else {
                                     Log.d(
@@ -356,6 +374,10 @@ class SpotCheckConfig(
                                         }
                                         spotCheckURL =
                                             "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                                        variables.forEach { (key, value) ->
+                                            spotCheckURL = "$spotCheckURL&$key=$value"
+                                        }
+                                        
 
                                         return true
                                     } else {

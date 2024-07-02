@@ -1,2 +1,0 @@
-include ':survey-sparrow-android-sdk'
-rootProject.name='ss-android-sdk'

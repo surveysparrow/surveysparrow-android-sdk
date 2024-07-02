@@ -7,6 +7,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -155,12 +157,9 @@ public final class SsSurveyFragment extends Fragment {
         ssWebView.getSettings().setDomStorageEnabled(true);
         ssWebView.addJavascriptInterface(new JsObject(), "SsAndroidSdk");
 
-        final TextView closeButton = new TextView(getActivity());
-        closeButton.setText("X");
-        closeButton.setTextSize(18);
-        closeButton.setTextColor(Color.BLACK);
-        closeButton.setGravity(Gravity.CENTER);
-        closeButton.setBackgroundColor(Color.TRANSPARENT);
+        final ImageButton closeButton = new ImageButton(getActivity());
+        closeButton.setImageResource(R.drawable.ic_close_black);
+        closeButton.setBackgroundResource(R.drawable.ic_close_rounded);
         closeButton.setClickable(true);
         closeButton.setPadding(10, 10, 10, 10);
         closeButton.setVisibility(View.GONE);
@@ -169,7 +168,7 @@ public final class SsSurveyFragment extends Fragment {
             FrameLayout.LayoutParams.WRAP_CONTENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
         );
-        closeButtonParams.setMargins(0, 20, 60, 0);
+        closeButtonParams.setMargins(0, 60, 60, 0);
         closeButtonParams.gravity = Gravity.TOP | Gravity.END;
         closeButton.setLayoutParams(closeButtonParams);
 
@@ -216,13 +215,21 @@ public final class SsSurveyFragment extends Fragment {
         ssWebView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if (url.contains(SurveySparrow.SS_THANK_YOU_BASE_URL) || survey.getThankYouRedirect() == false) {
+                if (url.contains(SurveySparrow.SS_THANK_YOU_BASE_URL) || !survey.getThankYouRedirect()) {
                     return super.shouldOverrideUrlLoading(view, url);
                 } else {
                     view.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
                     return true;
                 }
             }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                String jsCode = "var observer = new MutationObserver(function(mutations) { mutations.forEach(function(mutation) { var elements = document.getElementsByClassName('ss-language-selector--wrapper ss-survey-font-family'); if (elements.length > 0) { for (var i = 0; i < elements.length; i++) { elements[i].style.marginRight = '45px'; } observer.disconnect(); } }); }); observer.observe(document.body, { childList: true, subtree: true });";
+                view.evaluateJavascript(jsCode, null);
+            }
+
         });
 
         ssWebView.setWebChromeClient(new WebChromeClient() {

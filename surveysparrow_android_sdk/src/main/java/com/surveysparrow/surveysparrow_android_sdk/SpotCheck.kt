@@ -39,6 +39,10 @@ import com.google.gson.Gson
 
 @Composable
 fun SpotCheck(config: SpotCheckConfig) {
+
+    val configuration = LocalConfiguration.current
+    val isTablet = configuration.screenWidthDp > 840
+
     var isButtonClicked by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -46,7 +50,16 @@ fun SpotCheck(config: SpotCheckConfig) {
     if( (config.closeButtonStyle["ctaButton"])?.let { isHexColor(it) } == true) {
         colorValue = config.closeButtonStyle["ctaButton"] as String
     }
-    val finalHeight = minOf(config.currentQuestionHeight.dp, (config.maxHeight * LocalConfiguration.current.screenHeightDp).dp)
+
+    val minHeight = minOf(config.currentQuestionHeight.dp, (config.maxHeight * LocalConfiguration.current.screenHeightDp).dp)
+    val additionalHeight = if (config.isBannerImageOn) 200.dp else 0.dp
+    var finalHeight = 0.dp
+
+    if(isTablet){
+        finalHeight = minHeight
+    }else {
+        finalHeight = minHeight + additionalHeight
+    }
 
     if (isButtonClicked) {
         LaunchedEffect(true) {

@@ -100,7 +100,7 @@ class SpotCheckConfig(
                     response.spotCheckId?.also { spotCheckID = it.toDouble() }
                     response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                     spotCheckURL =
-                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
                     variables.forEach { (key, value) ->
                         spotCheckURL = "$spotCheckURL&$key=$value"
                     }
@@ -128,10 +128,9 @@ class SpotCheckConfig(
                     if (checkPassed) {
                         val checkCondition = response.checkCondition
                         checkCondition?.let { condition ->
-                            val afterDelay = condition["afterDelay"] as? String
+                            val afterDelay = condition["afterDelay"] as? Double
                             afterDelay?.let { delay ->
-                                val afterDelayDouble = delay.toDoubleOrNull() ?: 0.0
-                                this.afterDelay = afterDelayDouble
+                                this.afterDelay = delay
                             }
                             val customEvent = condition["customEvent"] as? Map<String, Any>
                             customEventsSpotChecks = listOf(response.toMap())
@@ -146,7 +145,7 @@ class SpotCheckConfig(
                         response.spotCheckId?.also { spotCheckID = it.toDouble()}
                         response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                         spotCheckURL =
-                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
                         variables.forEach { (key, value) ->
                             spotCheckURL = "$spotCheckURL&$key=$value"
                         }
@@ -204,9 +203,10 @@ class SpotCheckConfig(
 
                         selectedSpotCheck?.let { selected ->
                             val checkCondition = selected["checks"] as? Map<String, Any>
-                            val afterDelay = checkCondition?.get("afterDelay") as? String
-                            val afterDelayDouble = afterDelay?.toDoubleOrNull() ?: 0.0
-                            this.afterDelay = afterDelayDouble
+                            val afterDelay = checkCondition?.get("afterDelay") as? Double
+                            if (afterDelay != null) {
+                                this.afterDelay = afterDelay
+                            }
                         }
                         this.triggerToken = selectedSpotCheck?.get("triggerToken") as String
                         setAppearance(selectedSpotCheck?.get("appearance") as Map<String, Any> ?: mapOf<String, Any>())
@@ -215,7 +215,7 @@ class SpotCheckConfig(
 
 
                         spotCheckURL =
-                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
                         variables.forEach { (key, value) ->
                             spotCheckURL = "$spotCheckURL&$key=$value"
                         }
@@ -318,7 +318,7 @@ class SpotCheckConfig(
                                         spotCheckContactID = it.toDouble()
                                     }
                                     spotCheckURL =
-                                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
                                     variables.forEach { (key, value) ->
                                         spotCheckURL = "$spotCheckURL&$key=$value"
                                     }
@@ -346,21 +346,17 @@ class SpotCheckConfig(
                                         val checkCondition =
                                             response.checkCondition as? Map<String, Any>
                                         checkCondition?.let { condition ->
-                                            val afterDelay = condition["afterDelay"] as? String
+                                            val afterDelay = condition["afterDelay"] as? Double
                                             afterDelay?.let { delay ->
-                                                val afterDelayDouble =
-                                                    delay.toDoubleOrNull() ?: 0.0
-                                                this.afterDelay = afterDelayDouble
+                                                this.afterDelay = delay
                                             }
                                             val customEvents =
                                                 condition["customEvent"] as? Map<String, Any>
                                             customEvents?.let { event ->
                                                 val delayInSeconds =
-                                                    event["delayInSeconds"] as? String
+                                                    event["delayInSeconds"] as? Double
                                                 delayInSeconds?.let { delay ->
-                                                    val afterDelayDouble =
-                                                        delay.toDoubleOrNull() ?: 0.0
-                                                    this.afterDelay = afterDelayDouble
+                                                    this.afterDelay = delay
                                                 }
                                             }
                                         }
@@ -373,7 +369,7 @@ class SpotCheckConfig(
                                             spotCheckContactID = it.toDouble()
                                         }
                                         spotCheckURL =
-                                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
                                         variables.forEach { (key, value) ->
                                             spotCheckURL = "$spotCheckURL&$key=$value"
                                         }
@@ -439,7 +435,7 @@ class SpotCheckConfig(
         position?.let { pos ->
             if (pos == "top_full") this.position = "top"
             else if (pos == "center_center") this.position = "center"
-            else if (pos == "bottom_full") this.position = "bottom"
+            else this.position = "bottom"
         }
         this.isCloseButtonEnabled = isCloseButtonEnabled ?: false
 

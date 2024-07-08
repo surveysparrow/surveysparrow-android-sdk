@@ -52,7 +52,7 @@ fun SpotCheck(config: SpotCheckConfig) {
     }
 
     val minHeight = minOf(config.currentQuestionHeight.dp, (config.maxHeight * LocalConfiguration.current.screenHeightDp).dp)
-    val additionalHeight = if (config.isBannerImageOn) 200.dp else 0.dp
+    val additionalHeight = if (config.isBannerImageOn) 90.dp else 0.dp
     var finalHeight = 0.dp
 
     if(isTablet){

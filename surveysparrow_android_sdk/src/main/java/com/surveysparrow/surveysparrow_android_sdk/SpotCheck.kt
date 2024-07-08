@@ -41,7 +41,7 @@ import com.google.gson.Gson
 fun SpotCheck(config: SpotCheckConfig) {
 
     val configuration = LocalConfiguration.current
-    val isTablet = configuration.screenWidthDp > 840
+    val isTablet = configuration.screenWidthDp > 560
 
     var isButtonClicked by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }

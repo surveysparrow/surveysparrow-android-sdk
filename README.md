@@ -10,7 +10,7 @@
 
 <br>
 
-#### Survey's Normal SDK Share available here
+#### Survey's Normal SDK Share is available here
 
 #### [Normal SDK Share](https://github.com/surveysparrow/surveysparrow-android-sdk/tree/0.5.3)
 

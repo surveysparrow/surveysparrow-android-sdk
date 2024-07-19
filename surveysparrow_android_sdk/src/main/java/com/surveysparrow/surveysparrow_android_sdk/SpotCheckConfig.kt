@@ -21,7 +21,8 @@ class SpotCheckConfig(
     private var userDetails: HashMap<String, String>,
     private var variables: Map<String, Any> = mapOf(),
     private var customProperties: Map<String, Any> = mapOf(),
-    var preferences: SharedPreferences? = null
+    var preferences: SharedPreferences? = null,
+    private var sparrowLang: String = ""
 ) {
     var position by mutableStateOf("")
     var spotCheckURL by mutableStateOf("")
@@ -104,7 +105,10 @@ class SpotCheckConfig(
                     variables.forEach { (key, value) ->
                         spotCheckURL = "$spotCheckURL&$key=$value"
                     }
-                    
+
+                    if(sparrowLang.isNotEmpty()){
+                        spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
+                    }
 
                     return true
                 } else {
@@ -149,7 +153,10 @@ class SpotCheckConfig(
                         variables.forEach { (key, value) ->
                             spotCheckURL = "$spotCheckURL&$key=$value"
                         }
-                        
+
+                        if(sparrowLang.isNotEmpty()){
+                            spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
+                        }
 
                         return true
 
@@ -190,8 +197,8 @@ class SpotCheckConfig(
                                 }
                                 return@forEach
                             } else {
-                                val afterDelay = checks["afterDelay"] as? String
-                                val delay = afterDelay?.toDoubleOrNull() ?: Double.POSITIVE_INFINITY
+                                val afterDelay = checks["afterDelay"] as? Double
+                                val delay = afterDelay ?: Double.POSITIVE_INFINITY
                                 if (minDelay > delay) {
                                     minDelay = delay
                                     spotCheck.also {
@@ -199,30 +206,45 @@ class SpotCheckConfig(
                                     }
                                 }
                             }
-                        }
 
-                        selectedSpotCheck?.let { selected ->
-                            val checkCondition = selected["checks"] as? Map<String, Any>
-                            val afterDelay = checkCondition?.get("afterDelay") as? Double
-                            if (afterDelay != null) {
-                                this.afterDelay = afterDelay
+                            selectedSpotCheck?.let { selected ->
+                                val checkCondition = selected["checks"] as? Map<String, Any>
+                                val afterDelay = checkCondition?.get("afterDelay") as? Double
+                                if (afterDelay != null) {
+                                    this.afterDelay = afterDelay
+                                }
+                            }
+                            if (!selectedSpotCheck.isNullOrEmpty()) {
+                                this.triggerToken = selectedSpotCheck?.get("triggerToken") as String
+                                setAppearance(
+                                    selectedSpotCheck?.get("appearance") as Map<String, Any>
+                                        ?: mapOf<String, Any>()
+                                )
+                                spotCheckID = selectedSpotCheck?.get("id") as Double
+                                spotCheckContactID =
+                                    (selectedSpotCheck?.get("spotCheckContact") as Map<String, Any>)?.get(
+                                        "id"
+                                    ) as Double
+
+
+                                spotCheckURL =
+                                    "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${
+                                        String.format(
+                                            "%.0f",
+                                            spotCheckContactID
+                                        )
+                                    }&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
+                                variables.forEach { (key, value) ->
+                                    spotCheckURL = "$spotCheckURL&$key=$value"
+                                }
+
+                                if (sparrowLang.isNotEmpty()) {
+                                    spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
+                                }
+
+                                return true
                             }
                         }
-                        this.triggerToken = selectedSpotCheck?.get("triggerToken") as String
-                        setAppearance(selectedSpotCheck?.get("appearance") as Map<String, Any> ?: mapOf<String, Any>())
-                        spotCheckID = selectedSpotCheck?.get("id") as Double
-                        spotCheckContactID = (selectedSpotCheck?.get("spotCheckContact") as Map<String, Any>)?.get("id") as Double
-
-
-                        spotCheckURL =
-                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
-                        variables.forEach { (key, value) ->
-                            spotCheckURL = "$spotCheckURL&$key=$value"
-                        }
-                        
-
-                        return true
-
                     }
                     else {
                         Log.d(
@@ -322,7 +344,10 @@ class SpotCheckConfig(
                                     variables.forEach { (key, value) ->
                                         spotCheckURL = "$spotCheckURL&$key=$value"
                                     }
-                                    
+
+                                    if(sparrowLang.isNotEmpty()){
+                                        spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
+                                    }
 
                                     return true
                                 } else {
@@ -373,7 +398,10 @@ class SpotCheckConfig(
                                         variables.forEach { (key, value) ->
                                             spotCheckURL = "$spotCheckURL&$key=$value"
                                         }
-                                        
+
+                                        if(sparrowLang.isNotEmpty()){
+                                            spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
+                                        }
 
                                         return true
                                     } else {

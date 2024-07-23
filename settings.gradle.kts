@@ -1,4 +1,3 @@
-
 pluginManagement {
     repositories {
         google()
@@ -16,5 +15,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "surveysparrow-android-sdk"
-
-include(":survey-sparrow-android-sdk")
+include(":ExampleApp")
+include(":surveysparrow_android_sdk")

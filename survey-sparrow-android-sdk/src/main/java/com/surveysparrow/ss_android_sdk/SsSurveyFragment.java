@@ -234,7 +234,7 @@ public final class SsSurveyFragment extends Fragment {
         });
 
         ssWebView.setWebChromeClient(new WebChromeClient() {
-            // For Android 5.0+
+
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
                 if (mUploadMessageArray != null) {

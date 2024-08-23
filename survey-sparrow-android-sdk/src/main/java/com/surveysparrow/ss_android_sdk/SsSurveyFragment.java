@@ -7,10 +7,12 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
 import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.Fragment;
 
 import android.view.Gravity;
@@ -150,6 +152,12 @@ public final class SsSurveyFragment extends Fragment {
         ssWebView.getSettings().setDomStorageEnabled(true);
         ssWebView.addJavascriptInterface(new JsObject(), "SsAndroidSdk");
 
+        ConstraintLayout constraintLayout = new ConstraintLayout(getActivity());
+        constraintLayout.setLayoutParams(new ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.MATCH_PARENT
+        ));
+
         final ImageButton closeButton = new ImageButton(getActivity());
         closeButton.setImageResource(R.drawable.ic_close_black);
         closeButton.setBackgroundResource(R.drawable.ic_close_rounded);
@@ -157,13 +165,24 @@ public final class SsSurveyFragment extends Fragment {
         closeButton.setPadding(10, 10, 10, 10);
         closeButton.setVisibility(View.GONE);
 
-        FrameLayout.LayoutParams closeButtonParams = new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
+        ConstraintLayout.LayoutParams closeButtonParams = new ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.WRAP_CONTENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
         );
-        closeButtonParams.setMargins(0, 60, 60, 0);
-        closeButtonParams.gravity = Gravity.TOP | Gravity.END;
+
+        int marginInDp = 20;
+        int marginInPx = (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, marginInDp, getResources().getDisplayMetrics()
+        );
+
+        closeButtonParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+        closeButtonParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+        closeButtonParams.setMargins(0, marginInPx, marginInPx, 0);
+
         closeButton.setLayoutParams(closeButtonParams);
+        constraintLayout.addView(closeButton);
+
+
         HashMap properties = survey.getProperties();
 
         // Set an OnClickListener for the close button
@@ -221,7 +240,7 @@ public final class SsSurveyFragment extends Fragment {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 if ((!properties.containsKey("isButtonEnabled")) || Boolean.TRUE.equals(properties.get("isButtonEnabled"))) {
-                    String jsCode = "var observer = new MutationObserver(function(mutations) { mutations.forEach(function(mutation) { var elements = document.getElementsByClassName('ss-language-selector--wrapper ss-survey-font-family'); if (elements.length > 0) { for (var i = 0; i < elements.length; i++) { elements[i].style.marginRight = '45px'; } observer.disconnect(); } }); }); observer.observe(document.body, { childList: true, subtree: true });";
+                    String jsCode = "const styleTag = document.createElement(\"style\"); styleTag.innerHTML = `.ss-language-selector--wrapper { margin-right: 45px; }`; document.body.appendChild(styleTag);";
                     view.evaluateJavascript(jsCode, null);
                 }
             }
@@ -246,7 +265,7 @@ public final class SsSurveyFragment extends Fragment {
         ssLayout.addView(ssWebView);
         ssLayout.addView(progressBar);
         if( (!properties.containsKey("isButtonEnabled")) || Boolean.TRUE.equals(properties.get("isButtonEnabled") )) {
-            ssLayout.addView(closeButton);
+            ssLayout.addView(constraintLayout);
         }
         return ssLayout;
     }

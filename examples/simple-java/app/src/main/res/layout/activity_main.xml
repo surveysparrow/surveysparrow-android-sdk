@@ -53,6 +53,7 @@
         app:layout_constraintTop_toBottomOf="@+id/domain"
         app:layout_constraintVertical_bias="0.033" />
 
+
     <EditText
         android:id="@+id/language"
         android:layout_width="150dp"
@@ -62,8 +63,22 @@
         android:inputType="text"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.441"
+        app:layout_constraintHorizontal_bias="0.187"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/domain"
+        app:layout_constraintVertical_bias="0.146" />
+
+    <EditText
+        android:id="@+id/closeBtn"
+        android:layout_width="100dp"
+        android:layout_height="51dp"
+        android:ems="10"
+        android:hint="@string/closeBtn"
+        android:inputType="text"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.713"
+        app:layout_constraintStart_toStartOf="@+id/language"
         app:layout_constraintTop_toBottomOf="@+id/domain"
         app:layout_constraintVertical_bias="0.146" />
 

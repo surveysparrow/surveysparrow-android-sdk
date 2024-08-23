@@ -8,8 +8,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -25,16 +23,11 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.widget.TextView;
 
 import com.surveysparrow.ss_android_sdk.SsSurvey.CustomParam;
-import android.os.AsyncTask;
 
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.Set;
 import org.json.JSONException;
 import org.json.JSONObject;
 /**
@@ -171,6 +164,7 @@ public final class SsSurveyFragment extends Fragment {
         closeButtonParams.setMargins(0, 60, 60, 0);
         closeButtonParams.gravity = Gravity.TOP | Gravity.END;
         closeButton.setLayoutParams(closeButtonParams);
+        HashMap properties = survey.getProperties();
 
         // Set an OnClickListener for the close button
         closeButton.setOnClickListener(new View.OnClickListener() {
@@ -226,8 +220,10 @@ public final class SsSurveyFragment extends Fragment {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                String jsCode = "var observer = new MutationObserver(function(mutations) { mutations.forEach(function(mutation) { var elements = document.getElementsByClassName('ss-language-selector--wrapper ss-survey-font-family'); if (elements.length > 0) { for (var i = 0; i < elements.length; i++) { elements[i].style.marginRight = '45px'; } observer.disconnect(); } }); }); observer.observe(document.body, { childList: true, subtree: true });";
-                view.evaluateJavascript(jsCode, null);
+                if ((!properties.containsKey("isButtonEnabled")) || Boolean.TRUE.equals(properties.get("isButtonEnabled"))) {
+                    String jsCode = "var observer = new MutationObserver(function(mutations) { mutations.forEach(function(mutation) { var elements = document.getElementsByClassName('ss-language-selector--wrapper ss-survey-font-family'); if (elements.length > 0) { for (var i = 0; i < elements.length; i++) { elements[i].style.marginRight = '45px'; } observer.disconnect(); } }); }); observer.observe(document.body, { childList: true, subtree: true });";
+                    view.evaluateJavascript(jsCode, null);
+                }
             }
 
         });
@@ -249,7 +245,9 @@ public final class SsSurveyFragment extends Fragment {
         ssWebView.loadUrl(this.survey.getSsUrl());
         ssLayout.addView(ssWebView);
         ssLayout.addView(progressBar);
-        ssLayout.addView(closeButton);
+        if( (!properties.containsKey("isButtonEnabled")) || Boolean.TRUE.equals(properties.get("isButtonEnabled") )) {
+            ssLayout.addView(closeButton);
+        }
         return ssLayout;
     }
 

@@ -245,7 +245,7 @@ public final class SsSurveyFragment extends Fragment {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                if ((!properties.containsKey("isButtonEnabled")) || Boolean.TRUE.equals(properties.get("isButtonEnabled"))) {
+                if ((!properties.containsKey("isCloseButtonEnabled")) || Boolean.TRUE.equals(properties.get("isCloseButtonEnabled"))) {
                     String jsCode = "const styleTag = document.createElement(\"style\"); styleTag.innerHTML = `.ss-language-selector--wrapper { margin-right: 45px; }`; document.body.appendChild(styleTag);";
                     view.evaluateJavascript(jsCode, null);
                 }
@@ -288,7 +288,7 @@ public final class SsSurveyFragment extends Fragment {
         ssWebView.loadUrl(this.survey.getSsUrl());
         ssLayout.addView(ssWebView);
         ssLayout.addView(progressBar);
-        if( (!properties.containsKey("isButtonEnabled")) || Boolean.TRUE.equals(properties.get("isButtonEnabled") )) {
+        if( (!properties.containsKey("isCloseButtonEnabled")) || Boolean.TRUE.equals(properties.get("isCloseButtonEnabled") )) {
             ssLayout.addView(constraintLayout);
         }
         return ssLayout;

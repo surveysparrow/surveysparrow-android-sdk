@@ -9,12 +9,12 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
-import android.webkit.ValueCallback;
+import android.util.TypedValue;
 import android.widget.ImageButton;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.Fragment;
 
 import android.view.Gravity;
@@ -30,7 +30,7 @@ import android.widget.ProgressBar;
 
 import com.surveysparrow.ss_android_sdk.SsSurvey.CustomParam;
 
-import java.util.Objects;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -158,6 +158,12 @@ public final class SsSurveyFragment extends Fragment {
         ssWebView.getSettings().setDomStorageEnabled(true);
         ssWebView.addJavascriptInterface(new JsObject(), "SsAndroidSdk");
 
+        ConstraintLayout constraintLayout = new ConstraintLayout(getActivity());
+        constraintLayout.setLayoutParams(new ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.MATCH_PARENT
+        ));
+
         final ImageButton closeButton = new ImageButton(getActivity());
         closeButton.setImageResource(R.drawable.ic_close_black);
         closeButton.setBackgroundResource(R.drawable.ic_close_rounded);
@@ -165,13 +171,25 @@ public final class SsSurveyFragment extends Fragment {
         closeButton.setPadding(10, 10, 10, 10);
         closeButton.setVisibility(View.GONE);
 
-        FrameLayout.LayoutParams closeButtonParams = new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
+        ConstraintLayout.LayoutParams closeButtonParams = new ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.WRAP_CONTENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
         );
-        closeButtonParams.setMargins(0, 60, 60, 0);
-        closeButtonParams.gravity = Gravity.TOP | Gravity.END;
+
+        int marginInDp = 20;
+        int marginInPx = (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, marginInDp, getResources().getDisplayMetrics()
+        );
+
+        closeButtonParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+        closeButtonParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+        closeButtonParams.setMargins(0, marginInPx, marginInPx, 0);
+
         closeButton.setLayoutParams(closeButtonParams);
+        constraintLayout.addView(closeButton);
+
+
+        HashMap properties = survey.getProperties();
 
         // Set an OnClickListener for the close button
         closeButton.setOnClickListener(new View.OnClickListener() {
@@ -227,8 +245,10 @@ public final class SsSurveyFragment extends Fragment {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                String jsCode = "const styleTag = document.createElement('style'); styleTag.innerHTML = `.ss-language-selector--wrapper { margin-right: 45px; }`; document.body.appendChild(styleTag);";
-                view.evaluateJavascript(jsCode, null);
+                if ((!properties.containsKey("isButtonEnabled")) || Boolean.TRUE.equals(properties.get("isButtonEnabled"))) {
+                    String jsCode = "const styleTag = document.createElement(\"style\"); styleTag.innerHTML = `.ss-language-selector--wrapper { margin-right: 45px; }`; document.body.appendChild(styleTag);";
+                    view.evaluateJavascript(jsCode, null);
+                }
             }
 
         });
@@ -268,7 +288,9 @@ public final class SsSurveyFragment extends Fragment {
         ssWebView.loadUrl(this.survey.getSsUrl());
         ssLayout.addView(ssWebView);
         ssLayout.addView(progressBar);
-        ssLayout.addView(closeButton);
+        if( (!properties.containsKey("isButtonEnabled")) || Boolean.TRUE.equals(properties.get("isButtonEnabled") )) {
+            ssLayout.addView(constraintLayout);
+        }
         return ssLayout;
     }
 

@@ -43,6 +43,8 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
 
     public static String SS_LANG_CODE = "PREFERRED_LANG_CODE" ;
 
+    public static Boolean CLOSE_BUTTON_ENABLED = true ;
+
     SsSurvey survey;
     SurveySparrow surveySparrow;
 
@@ -54,6 +56,7 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
         EditText token = findViewById(R.id.token);
         EditText domain = findViewById(R.id.domain);
         EditText langCode = findViewById(R.id.language);
+        EditText closeBtn = findViewById(R.id.closeBtn);
 
         // Add TextWatchers to the EditText fields to update SS_DOMAIN and SS_TOKEN
         token.addTextChangedListener(new TextWatcher() {
@@ -81,6 +84,20 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
             public void afterTextChanged(Editable editable) {
                 SS_LANG_CODE = editable.toString();
                 Log.d("SS_LANG_CODE", SS_LANG_CODE);
+            }
+        });
+        closeBtn.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                String temp = editable.toString();
+                CLOSE_BUTTON_ENABLED = temp.equals("1");
+                Log.d("CLOSE_BUTTON_ENABLED", CLOSE_BUTTON_ENABLED.toString());
             }
         });
 
@@ -113,6 +130,7 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
          // Add Language code in the properties HashMap and pass it to SsSurvey
         HashMap properties = new HashMap<String,String>();
         properties.put("langCode", SS_LANG_CODE);
+        properties.put("isButtonEnabled", CLOSE_BUTTON_ENABLED);
 
         // Create a SsSurvey object with your domain & survey token.
         survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params, properties);

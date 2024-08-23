@@ -23,7 +23,7 @@ allprojects {
 
 Add the following line to your **app modules** `build.gradle` file inside `dependencies`
 ```gradle
-implementation 'com.github.surveysparrow:surveysparrow-android-sdk:0.5.4'
+implementation 'com.github.surveysparrow:surveysparrow-android-sdk:0.5.5'
 ```
 
 The SDK need Internet access to fetch survey & submit answers. Add the following permissions to `AndroidManifest.xml` file

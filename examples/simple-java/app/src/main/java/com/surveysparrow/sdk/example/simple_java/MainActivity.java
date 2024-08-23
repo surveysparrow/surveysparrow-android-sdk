@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity implements OnSsResponseEvent
          // Add Language code in the properties HashMap and pass it to SsSurvey
         HashMap properties = new HashMap<String,String>();
         properties.put("langCode", SS_LANG_CODE);
-        properties.put("isButtonEnabled", CLOSE_BUTTON_ENABLED);
+        properties.put("isCloseButtonEnabled", CLOSE_BUTTON_ENABLED);
 
         // Create a SsSurvey object with your domain & survey token.
         survey = new SsSurvey(SS_DOMAIN, SS_TOKEN, params, properties);

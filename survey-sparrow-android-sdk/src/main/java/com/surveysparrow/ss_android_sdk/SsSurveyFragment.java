@@ -2,6 +2,8 @@ package com.surveysparrow.ss_android_sdk;
 
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -46,14 +48,18 @@ public final class SsSurveyFragment extends Fragment {
     private int widgetContactId = 0;
     private ProgressBar progressBar;
     private ObjectAnimator progressBarAnimator;
-    public static final String LOG_TAG = "SS_SAMPLE";
     public static final String SS_VALIDATION = "SS_VALIDATION";
-    public JSONObject jsonObject;
     public JSONObject closeSurveyJSONObject;
     private OnSsResponseEventListener onSsResponseEventListener;
     public Boolean surveyCompleted = false;
     private OnSsValidateSurveyEventListener validationListener;
     private OnSsCloseSurveyEventListener closeSurveyListener;
+
+    private ValueCallback<Uri> mUploadMessage;
+    private ValueCallback<Uri[]> mUploadMessageArray;
+    private final static int FILE_CHOOSER_RESULT_CODE = 1183;
+    private final static int REQUEST_SELECT_FILE = 1184;
+    private WebView ssWebView;
 
     public void setValidateSurveyListener(OnSsValidateSurveyEventListener listener) {
         validationListener = listener;
@@ -66,7 +72,7 @@ public final class SsSurveyFragment extends Fragment {
     public void setData(int id) {
         widgetContactId = id;
     }
-    WebView ssWebView;
+
     /**
      * Create SsSurveyFragment public constructor.
      */
@@ -76,7 +82,7 @@ public final class SsSurveyFragment extends Fragment {
 
     /**
      * Set the survey object.
-     * 
+     *
      * @param survey SsSurvey object.
      * @return Returns the same SsSurveyFragment object, for chaining
      * multiple calls into a single statement.
@@ -130,7 +136,7 @@ public final class SsSurveyFragment extends Fragment {
                     validationListener.onSsValidateSurvey(jsonObject);
                 }
                 Log.v(SS_VALIDATION, "survey validation json" + jsonObject.toString());
-                if (jsonObject.getBoolean("active") != true) {
+                if (!jsonObject.getBoolean("active")) {
                         return null;
                 }
                 if (jsonObject.has("widgetContactId")) {
@@ -141,7 +147,7 @@ public final class SsSurveyFragment extends Fragment {
             }
         }
 
-        final FrameLayout ssLayout = new FrameLayout(getActivity());
+        final FrameLayout ssLayout = new FrameLayout(Objects.requireNonNull(getActivity()));
 
         progressBar = new ProgressBar(getActivity(), null, android.R.attr.progressBarStyleHorizontal);
         progressBar.setMax(100);
@@ -208,11 +214,11 @@ public final class SsSurveyFragment extends Fragment {
                 }
 
                 try {
-                    if (closeSurveyJSONObject.getBoolean("surveyClosed") == true) {
+                    if (closeSurveyJSONObject.getBoolean("surveyClosed")) {
                         if (closeSurveyListener != null) {
                             closeSurveyListener.onSsCloseSurveyEvent();
                         } else {
-                            getActivity().runOnUiThread(new Runnable() {
+                            Objects.requireNonNull(getActivity()).runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
                                     ssLayout.setVisibility(View.GONE);
@@ -248,6 +254,24 @@ public final class SsSurveyFragment extends Fragment {
         });
 
         ssWebView.setWebChromeClient(new WebChromeClient() {
+
+            @Override
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+                if (mUploadMessageArray != null) {
+                    mUploadMessageArray.onReceiveValue(null);
+                }
+                mUploadMessageArray = filePathCallback;
+                Intent intent = fileChooserParams.createIntent();
+                try {
+                    startActivityForResult(intent, REQUEST_SELECT_FILE);
+                } catch (ActivityNotFoundException e) {
+                    mUploadMessageArray = null;
+                    Toast.makeText(Objects.requireNonNull(getActivity()).getApplicationContext(), "Cannot open file chooser", Toast.LENGTH_LONG).show();
+                    return false;
+                }
+                return true;
+            }
+
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 super.onProgressChanged(view, newProgress);
@@ -268,6 +292,22 @@ public final class SsSurveyFragment extends Fragment {
             ssLayout.addView(constraintLayout);
         }
         return ssLayout;
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_SELECT_FILE) {
+            if (mUploadMessageArray == null) return;
+            mUploadMessageArray.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+            mUploadMessageArray = null;
+        } else if (requestCode == FILE_CHOOSER_RESULT_CODE) {
+            if (null == mUploadMessage) return;
+            Uri result = data == null || resultCode != Activity.RESULT_OK ? null : data.getData();
+            mUploadMessage.onReceiveValue(result);
+            mUploadMessage = null;
+        } else {
+            super.onActivityResult(requestCode, resultCode, data);
+        }
     }
 
     private class JsObject {

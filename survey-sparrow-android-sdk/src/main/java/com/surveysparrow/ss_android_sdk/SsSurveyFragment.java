@@ -1,13 +1,17 @@
 package com.surveysparrow.ss_android_sdk;
 
+import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.util.TypedValue;
 import android.webkit.ValueCallback;
@@ -16,6 +20,9 @@ import android.widget.ImageButton;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
 import android.view.Gravity;
@@ -33,6 +40,11 @@ import android.widget.Toast;
 import com.surveysparrow.ss_android_sdk.SsSurvey.CustomParam;
 
 import java.util.HashMap;
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import org.json.JSONException;
@@ -60,8 +72,12 @@ public final class SsSurveyFragment extends Fragment {
 
     private ValueCallback<Uri> mUploadMessage;
     private ValueCallback<Uri[]> mUploadMessageArray;
-    private final static int FILE_CHOOSER_RESULT_CODE = 1183;
-    private final static int REQUEST_SELECT_FILE = 1184;
+    private static final int REQUEST_IMAGE_CAPTURE = 1185;
+    private static final int FILE_CHOOSER_RESULT_CODE = 1183;
+    private static final int REQUEST_SELECT_FILE = 1184;
+    private static final int REQUEST_CAMERA_PERMISSION = 100;
+
+    private Uri mCameraImageUri;
     private WebView ssWebView;
 
     public void setValidateSurveyListener(OnSsValidateSurveyEventListener listener) {
@@ -301,15 +317,75 @@ public final class SsSurveyFragment extends Fragment {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_SELECT_FILE) {
             if (mUploadMessageArray == null) return;
-            mUploadMessageArray.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+            Uri[] results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+            Log.d("REQUEST_SELECT_FILE", "results: " + (results != null ? Arrays.toString(results) : "null"));
+            mUploadMessageArray.onReceiveValue(results);
             mUploadMessageArray = null;
         } else if (requestCode == FILE_CHOOSER_RESULT_CODE) {
-            if (null == mUploadMessage) return;
+            if (mUploadMessage == null) return;
             Uri result = data == null || resultCode != Activity.RESULT_OK ? null : data.getData();
+            Log.d("FILE_CHOOSER_RESULT_CODE", "result: " + (result != null ? result.toString() : "null"));
             mUploadMessage.onReceiveValue(result);
             mUploadMessage = null;
+        } else if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK) {
+            Log.d("REQUEST_IMAGE_CAPTURE", "Captured Image URI: " + (mCameraImageUri != null ? mCameraImageUri.toString() : "null"));
+            if (mUploadMessageArray != null) {
+                Uri[] results = new Uri[]{mCameraImageUri};
+                mUploadMessageArray.onReceiveValue(results);
+                Log.d("REQUEST_IMAGE_CAPTURE", "Image uploaded to WebView: " + Arrays.toString(results));
+                mUploadMessageArray = null;
+            }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
+        }
+    }
+    private void openCamera() {
+        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+        } else {
+            dispatchTakePictureIntent();
+        }
+    }
+
+    private void dispatchTakePictureIntent() {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePictureIntent.resolveActivity(getActivity().getPackageManager()) != null) {
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+                Log.e("Camera", "Error occurred while creating the File", ex);
+            }
+
+            if (photoFile != null) {
+                mCameraImageUri = FileProvider.getUriForFile(getActivity(),
+                        getActivity().getApplicationContext().getPackageName() + ".fileprovider",
+                        photoFile);
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraImageUri);
+                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+            }
+        }
+    }
+
+    private File createImageFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = getActivity().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        return File.createTempFile(imageFileName, ".jpg", storageDir);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CAMERA_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                dispatchTakePictureIntent();
+            } else {
+                // Permission denied
+                Toast.makeText(getActivity(), "Camera permission is required to take pictures.", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -318,6 +394,11 @@ public final class SsSurveyFragment extends Fragment {
         public void shareData(String data) {
             surveyCompleted = true;
             onSsResponseEventListener.onSsResponseEvent(SurveySparrow.toJSON(data));
+        }
+
+        @JavascriptInterface
+        public void captureImage() {
+            openCamera();
         }
     }
 }

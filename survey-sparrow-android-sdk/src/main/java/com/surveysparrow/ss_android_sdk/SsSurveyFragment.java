@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
+import android.webkit.ValueCallback;
 import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
@@ -27,10 +28,12 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import com.surveysparrow.ss_android_sdk.SsSurvey.CustomParam;
 
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import org.json.JSONException;
 import org.json.JSONObject;

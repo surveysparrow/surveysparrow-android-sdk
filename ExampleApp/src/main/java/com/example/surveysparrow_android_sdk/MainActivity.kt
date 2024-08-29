@@ -64,8 +64,8 @@ fun Main() {
 
     val spotCheckConfig = remember {
         SpotCheckConfig(
-            domainName = "<your-Domain>",
-            targetToken = "<generated-token>",
+            domainName = "5339-183-82-247-142.ngrok-free.app",
+            targetToken = "tar-56daZvbmaiUpeBf3a6BPge",
             userDetails = hashMapOf(),
             variables = mapOf(),
             customProperties = mapOf(),

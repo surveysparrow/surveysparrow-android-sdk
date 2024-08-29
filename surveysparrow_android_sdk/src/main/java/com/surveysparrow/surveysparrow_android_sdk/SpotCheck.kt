@@ -1,13 +1,24 @@
 package com.surveysparrow.surveysparrow_android_sdk
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Color.parseColor
+import android.net.Uri
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,12 +64,30 @@ fun SpotCheck(config: SpotCheckConfig) {
 
     val minHeight = minOf(config.currentQuestionHeight.dp, (config.maxHeight * LocalConfiguration.current.screenHeightDp).dp)
     val additionalHeight = if (config.isBannerImageOn) 90.dp else 0.dp
-    var finalHeight = 0.dp
+    val finalHeight = if (isTablet) minHeight else minHeight + additionalHeight
 
-    if(isTablet){
-        finalHeight = minHeight
-    }else {
-        finalHeight = minHeight + additionalHeight
+    var mUploadMessage: ValueCallback<Uri?>? by remember { mutableStateOf(null) }
+    var mUploadMessageArray: ValueCallback<Array<Uri?>?>? by remember { mutableStateOf(null) }
+
+    // File chooser launcher
+    val fileChooserLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (mUploadMessageArray == null && mUploadMessage == null) {
+            return@rememberLauncherForActivityResult
+        }
+
+        val resultCode = result.resultCode
+        val data = result.data
+
+        if (resultCode == Activity.RESULT_OK) {
+            mUploadMessageArray?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data))
+            mUploadMessageArray = null
+        } else {
+            mUploadMessageArray?.onReceiveValue(null)
+            mUploadMessageArray = null
+        }
+
     }
 
     if (isButtonClicked) {
@@ -122,6 +151,31 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     override fun onPageFinished(view: WebView?, url: String?) {
                                         super.onPageFinished(view, url)
                                         isLoading = false
+                                    }
+                                }
+
+                                webChromeClient = object : WebChromeClient() {
+                                    override fun onShowFileChooser(
+                                        webView: WebView?,
+                                        filePathCallback: ValueCallback<Array<Uri?>?>?,
+                                        fileChooserParams: FileChooserParams?
+                                    ): Boolean {
+
+                                        if (mUploadMessageArray != null) {
+                                            mUploadMessageArray?.onReceiveValue(null)
+                                        }
+                                        mUploadMessageArray = filePathCallback
+                                        val intent = fileChooserParams?.createIntent()
+                                        try {
+                                            if (intent != null) {
+                                                fileChooserLauncher.launch(intent)
+                                            }
+                                        } catch (e: ActivityNotFoundException) {
+                                            mUploadMessageArray = null
+                                            Toast.makeText(context, "Cannot open file chooser", Toast.LENGTH_LONG).show()
+                                            return false
+                                        }
+                                        return true
                                     }
                                 }
 

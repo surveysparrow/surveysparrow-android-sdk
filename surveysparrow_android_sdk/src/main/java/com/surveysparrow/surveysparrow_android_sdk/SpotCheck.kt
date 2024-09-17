@@ -1,5 +1,4 @@
 package com.surveysparrow.surveysparrow_android_sdk
-
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -9,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
@@ -16,7 +16,6 @@ import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -44,32 +43,47 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.gson.Gson
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+
 
 @Composable
 fun SpotCheck(config: SpotCheckConfig) {
 
+
+
+    var isCaptureImageActive by remember { mutableStateOf(false) }
+
+    var capturedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val context = LocalContext.current
+
     val configuration = LocalConfiguration.current
     val isTablet = configuration.screenWidthDp > 560
-
     var isButtonClicked by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
+
     var colorValue = "#000000"
-    if( (config.closeButtonStyle["ctaButton"])?.let { isHexColor(it) } == true) {
+    if (config.closeButtonStyle["ctaButton"]?.let { isHexColor(it) } == true) {
         colorValue = config.closeButtonStyle["ctaButton"] as String
     }
 
-    val minHeight = minOf(config.currentQuestionHeight.dp, (config.maxHeight * LocalConfiguration.current.screenHeightDp).dp)
+
+    val minHeight = minOf(config.currentQuestionHeight.dp, (config.maxHeight * configuration.screenHeightDp).dp)
     val additionalHeight = if (config.isBannerImageOn) 90.dp else 0.dp
     val finalHeight = if (isTablet) minHeight else minHeight + additionalHeight
 
     var mUploadMessage: ValueCallback<Uri?>? by remember { mutableStateOf(null) }
     var mUploadMessageArray: ValueCallback<Array<Uri?>?>? by remember { mutableStateOf(null) }
 
-    // File chooser launcher
+
+
     val fileChooserLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -89,6 +103,47 @@ fun SpotCheck(config: SpotCheckConfig) {
         }
 
     }
+
+
+
+    val imageCaptureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data: Intent? = result.data
+            val extras: Bundle? = data?.extras
+            val imageBitmap: Bitmap? = extras?.get("data") as? Bitmap
+            val filename = "image_${System.currentTimeMillis()}.png"
+            val file = File(context.filesDir, filename)
+            capturedImageUri = Uri.fromFile(file)
+            if (imageBitmap != null) {
+                try {
+
+                    FileOutputStream(file).use { out ->
+                        imageBitmap?.compress(
+                            Bitmap.CompressFormat.PNG,
+                            100,
+                            out
+                        )
+                    }
+                    Log.d("track", capturedImageUri.toString())
+                    mUploadMessageArray?.onReceiveValue(arrayOf(capturedImageUri))
+                    mUploadMessageArray = null
+                    capturedImageUri = null
+                } catch (e: IOException) {
+                    Log.d("Photo Capture", "Error in photo Capture")
+                    mUploadMessageArray = null
+                    capturedImageUri = null
+
+                }
+            } else {
+                mUploadMessageArray?.onReceiveValue(null)
+                mUploadMessageArray = null
+            }
+        }
+        isCaptureImageActive=false
+    }
+
 
     if (isButtonClicked) {
         LaunchedEffect(true) {
@@ -147,6 +202,24 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     }
                                 }, "Android")
 
+                                addJavascriptInterface(object : Any() {
+                                    @JavascriptInterface
+                                    fun captureImage() {
+                                        if(!isCaptureImageActive){
+
+                                        isCaptureImageActive = true  // Set flag when image capture starts
+                                        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                                        if (intent.resolveActivity(context.packageManager) != null) {
+                                            imageCaptureLauncher.launch(intent)
+                                        } else {
+                                            Log.d("Photo Capture", "No camera app found")
+                                            isCaptureImageActive = false  // Reset flag if no camera app found
+                                        }
+                                    }
+                                    }
+
+                                }, "SsAndroidSdk")
+
                                 webViewClient = object : WebViewClient() {
                                     override fun onPageFinished(view: WebView?, url: String?) {
                                         super.onPageFinished(view, url)
@@ -164,16 +237,25 @@ fun SpotCheck(config: SpotCheckConfig) {
                                         if (mUploadMessageArray != null) {
                                             mUploadMessageArray?.onReceiveValue(null)
                                         }
-                                        mUploadMessageArray = filePathCallback
-                                        val intent = fileChooserParams?.createIntent()
-                                        try {
-                                            if (intent != null) {
-                                                fileChooserLauncher.launch(intent)
+
+
+                                        if (isCaptureImageActive) {
+                                            mUploadMessageArray = filePathCallback
+                                            return true
+                                        }
+
+                                        else{
+                                            mUploadMessageArray = filePathCallback
+                                            val intent = fileChooserParams?.createIntent()
+                                            try {
+                                                if (intent != null) {
+                                                    fileChooserLauncher.launch(intent)
+                                                }
+                                            } catch (e: ActivityNotFoundException) {
+                                                mUploadMessageArray = null
+                                                Log.d("Upload-Questions", "Cannot open File chooser")
+                                                return false
                                             }
-                                        } catch (e: ActivityNotFoundException) {
-                                            mUploadMessageArray = null
-                                            Toast.makeText(context, "Cannot open file chooser", Toast.LENGTH_LONG).show()
-                                            return false
                                         }
                                         return true
                                     }

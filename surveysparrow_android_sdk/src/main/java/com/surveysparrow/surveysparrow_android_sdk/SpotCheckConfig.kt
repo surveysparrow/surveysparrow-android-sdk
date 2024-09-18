@@ -77,7 +77,8 @@ class SpotCheckConfig(
                     currentDate = getCurrentDate(),
                     timezone = TimeZone.getDefault().id
                 ),
-                traceId = traceId
+                traceId = traceId,
+                sdk = "ANDROID"
             )
             customEventsSpotChecks = listOf(mapOf())
             val apiService = RetrofitClient.create("https://${domainName}")

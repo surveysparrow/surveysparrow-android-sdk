@@ -74,7 +74,7 @@ data class EventRequestPayload(
     val visitor: Visitor,
     val spotCheckId: Int,
     val eventTrigger: Map<String, Map<String, Any>>,
-    val traceId: String
+    val traceId: String,
 )
 
 data class EventApiResponse(

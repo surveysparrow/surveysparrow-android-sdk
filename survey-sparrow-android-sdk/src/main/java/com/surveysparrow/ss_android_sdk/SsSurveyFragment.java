@@ -231,15 +231,6 @@ public final class SsSurveyFragment extends Fragment {
         constraintLayout.addView(closeButton);
         HashMap properties = survey.getProperties();
 
-        ssWebView.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                String jsCode = "const styleTag = document.createElement('style'); styleTag.innerHTML = `.ss-language-selector--wrapper { margin-right: 45px; }`; document.body.appendChild(styleTag);";
-                view.evaluateJavascript(jsCode, null);
-            }
-        });
-
         // Set an OnClickListener for the close button
         closeButton.setOnClickListener(new View.OnClickListener() {
             @Override

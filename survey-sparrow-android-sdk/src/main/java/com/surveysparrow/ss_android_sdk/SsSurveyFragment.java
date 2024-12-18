@@ -122,10 +122,9 @@ public final class SsSurveyFragment extends Fragment {
                         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
                         if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
-
                             imageCaptureLauncher.launch(intent);
-
                         }
+                        
                         else{
                             isCaptureImageActive = false;
                             Log.d("Error","Error in launching the the camera");
@@ -197,7 +196,6 @@ public final class SsSurveyFragment extends Fragment {
         progressBar = new ProgressBar(getActivity(), null, android.R.attr.progressBarStyleHorizontal);
         progressBar.setMax(100);
         progressBar.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 6, Gravity.TOP));
-
         ssWebView = new WebView(getActivity());
         ssWebView.getSettings().setJavaScriptEnabled(true);
         ssWebView.getSettings().setDomStorageEnabled(true);
@@ -229,17 +227,9 @@ public final class SsSurveyFragment extends Fragment {
         closeButtonParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
         closeButtonParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
         closeButtonParams.setMargins(0, marginInPx, marginInPx, 0);
-
         closeButton.setLayoutParams(closeButtonParams);
         constraintLayout.addView(closeButton);
-
-
         HashMap properties = survey.getProperties();
-
-
-
-
-
 
         ssWebView.setWebViewClient(new WebViewClient() {
             @Override
@@ -317,16 +307,11 @@ public final class SsSurveyFragment extends Fragment {
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
 
-                Log.d("msg","isCaptureImageActive="+isCaptureImageActive);
-
                 if (mUploadMessageArray != null) {
                     mUploadMessageArray.onReceiveValue(null);
                 }
-
                 mUploadMessageArray = filePathCallback;
-
                 if(isCaptureImageActive){
-
                     return true;
                 }
 
@@ -371,13 +356,11 @@ public final class SsSurveyFragment extends Fragment {
         if (requestCode == REQUEST_SELECT_FILE) {
             if (mUploadMessageArray == null) return;
             Uri[] results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
-            Log.d("REQUEST_SELECT_FILE", "results: " + (results != null ? Arrays.toString(results) : "null"));
             mUploadMessageArray.onReceiveValue(results);
             mUploadMessageArray = null;
         } else if (requestCode == FILE_CHOOSER_RESULT_CODE) {
             if (mUploadMessage == null) return;
             Uri result = data == null || resultCode != Activity.RESULT_OK ? null : data.getData();
-            Log.d("FILE_CHOOSER_RESULT_CODE", "result: " + (result != null ? result.toString() : "null"));
             mUploadMessage.onReceiveValue(result);
             mUploadMessage = null;
         }
@@ -397,7 +380,6 @@ public final class SsSurveyFragment extends Fragment {
                     imageBitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
                     mUploadMessageArray.onReceiveValue(new Uri[]{capturedImageUri});
                 } catch (IOException e) {
-                    Log.e("Image Capture", "Error saving image", e);
                     mUploadMessageArray.onReceiveValue(null);
                 }
                 mUploadMessageArray = null;
@@ -410,11 +392,7 @@ public final class SsSurveyFragment extends Fragment {
         }
 
         isCaptureImageActive = false;
-
-
     }
-
-
 
     private class JsObject {
         @JavascriptInterface
@@ -425,7 +403,6 @@ public final class SsSurveyFragment extends Fragment {
 
         @JavascriptInterface
         public void captureImage() {
-
             if (!isCaptureImageActive) {
                 isCaptureImageActive = true;
 

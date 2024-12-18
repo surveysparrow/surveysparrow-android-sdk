@@ -87,7 +87,6 @@ public final class SsSurvey implements Serializable {
         return properties;
     }
 
-
     CustomParam[] getCustomParams() {
         return customParamsValue;
     }

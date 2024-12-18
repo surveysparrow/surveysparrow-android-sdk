@@ -32,7 +32,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
-import android.widget.Toast;
 import com.surveysparrow.ss_android_sdk.SsSurvey.CustomParam;
 import java.io.FileOutputStream;
 import java.util.HashMap;
@@ -127,11 +126,9 @@ public final class SsSurveyFragment extends Fragment {
                         
                         else{
                             isCaptureImageActive = false;
-                            Log.d("Error","Error in launching the the camera");
                         }
                     } else {
                         isCaptureImageActive= false;
-                        Toast.makeText(getActivity(), "Camera permission is required", Toast.LENGTH_SHORT).show();
                     }
                 }
         );
@@ -313,7 +310,7 @@ public final class SsSurveyFragment extends Fragment {
                         startActivityForResult(intent, REQUEST_SELECT_FILE);
                     } catch (ActivityNotFoundException e) {
                         mUploadMessageArray = null;
-                        Toast.makeText(requireActivity().getApplicationContext(), "Cannot open file chooser", Toast.LENGTH_LONG).show();
+
                         return false;
                     }
                 }
@@ -412,7 +409,6 @@ public final class SsSurveyFragment extends Fragment {
                     }
                     else{
                         isCaptureImageActive = false;
-                        Log.d("Error","Error in launching the the camera");
                     }
                 }
 

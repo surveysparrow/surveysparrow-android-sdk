@@ -83,6 +83,11 @@ public final class SsSurvey implements Serializable {
         return surveyDomain;
     }
 
+    HashMap getProperties() {
+        return properties;
+    }
+
+
     CustomParam[] getCustomParams() {
         return customParamsValue;
     }

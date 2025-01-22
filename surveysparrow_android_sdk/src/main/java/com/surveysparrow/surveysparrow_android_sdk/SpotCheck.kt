@@ -17,6 +17,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +51,8 @@ import com.google.gson.Gson
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import android.Manifest
+import android.annotation.SuppressLint
 
 
 @Composable
@@ -145,6 +148,27 @@ fun SpotCheck(config: SpotCheckConfig) {
     }
 
 
+    val permissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            try{
+            if (isGranted) {
+
+                val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+
+
+
+                imageCaptureLauncher.launch(intent)
+            } else {
+                Log.d("Photo Capture", "Camera permission denied")
+                isCaptureImageActive = false
+            }
+        }
+        catch (e:IOException){
+            Log.d("Photo Capture", "Error in photo Capture")
+            isCaptureImageActive = false
+        }}
+
+
     if (isButtonClicked) {
         LaunchedEffect(true) {
             closeSpotCheck(config)
@@ -207,14 +231,27 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     fun captureImage() {
                                         if(!isCaptureImageActive){
 
-                                        isCaptureImageActive = true  // Set flag when image capture starts
-                                        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-                                        if (intent.resolveActivity(context.packageManager) != null) {
+                                        isCaptureImageActive = true
+
+                                            try{
+
+                                            if(context.checkSelfPermission(Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED){
+
+                                                val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+
+
                                             imageCaptureLauncher.launch(intent)
-                                        } else {
-                                            Log.d("Photo Capture", "No camera app found")
-                                            isCaptureImageActive = false  // Reset flag if no camera app found
-                                        }
+
+                                         }
+                                            else{
+                                                permissionLauncher.launch(Manifest.permission.CAMERA)
+                                            }
+
+                                            }
+                                            catch(e: IOException){
+                                                Log.d("Photo Capture", "Error in photo Capture")
+                                                isCaptureImageActive=false
+                                            }
                                     }
                                     }
 

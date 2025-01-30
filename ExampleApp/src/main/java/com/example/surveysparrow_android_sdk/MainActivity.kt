@@ -64,8 +64,8 @@ fun Main() {
 
     val spotCheckConfig = remember {
         SpotCheckConfig(
-            domainName = "<your-Domain>",
-            targetToken = "<generated-token>",
+            domainName = "<your-domain-name>",
+            targetToken = "<your-auth-token>",
             userDetails = hashMapOf(),
             variables = mapOf(),
             customProperties = mapOf(),

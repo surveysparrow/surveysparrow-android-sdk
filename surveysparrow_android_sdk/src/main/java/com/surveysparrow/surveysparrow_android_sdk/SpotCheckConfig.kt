@@ -101,7 +101,7 @@ class SpotCheckConfig(
                     response.spotCheckId?.also { spotCheckID = it.toDouble() }
                     response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                     spotCheckURL =
-                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
+                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
                     variables.forEach { (key, value) ->
                         spotCheckURL = "$spotCheckURL&$key=$value"
                     }
@@ -149,7 +149,7 @@ class SpotCheckConfig(
                         response.spotCheckId?.also { spotCheckID = it.toDouble()}
                         response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                         spotCheckURL =
-                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
+                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
                         variables.forEach { (key, value) ->
                             spotCheckURL = "$spotCheckURL&$key=$value"
                         }
@@ -233,7 +233,7 @@ class SpotCheckConfig(
                                             "%.0f",
                                             spotCheckContactID
                                         )
-                                    }&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
+                                    }&traceId=$traceId&spotcheckUrl=$screenName"
                                 variables.forEach { (key, value) ->
                                     spotCheckURL = "$spotCheckURL&$key=$value"
                                 }
@@ -340,7 +340,7 @@ class SpotCheckConfig(
                                         spotCheckContactID = it.toDouble()
                                     }
                                     spotCheckURL =
-                                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
+                                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
                                     variables.forEach { (key, value) ->
                                         spotCheckURL = "$spotCheckURL&$key=$value"
                                     }
@@ -394,7 +394,7 @@ class SpotCheckConfig(
                                             spotCheckContactID = it.toDouble()
                                         }
                                         spotCheckURL =
-                                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName&isAndroidMobileTarget=true"
+                                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
                                         variables.forEach { (key, value) ->
                                             spotCheckURL = "$spotCheckURL&$key=$value"
                                         }

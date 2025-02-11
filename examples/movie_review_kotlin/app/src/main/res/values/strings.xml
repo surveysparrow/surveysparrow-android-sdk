@@ -1,5 +1,0 @@
-<resources>
-    <string name="app_name">Movie App</string>
-    <string name="rate_movie">Rate the movie</string>
-    <string name="recommendation_title">You may also like</string>
-</resources>

@@ -1,14 +1,23 @@
 package com.surveysparrow.surveysparrow_android_sdk
-
+import android.app.Activity
 import android.content.SharedPreferences
 import android.content.res.Resources
 import android.util.Log
+import android.view.WindowManager
+import android.webkit.WebView
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -22,12 +31,10 @@ class SpotCheckConfig(
     private var variables: Map<String, Any> = mapOf(),
     private var customProperties: Map<String, Any> = mapOf(),
     var preferences: SharedPreferences? = null,
-    private var sparrowLang: String = ""
 ) {
-    var position by mutableStateOf("")
+    var position by mutableStateOf("bottom")
     var spotCheckURL by mutableStateOf("")
     var triggerToken by mutableStateOf("")
-
     var spotCheckID by mutableDoubleStateOf(0.0)
     var spotCheckContactID by mutableDoubleStateOf(0.0)
     private var selectedSpotCheckID by mutableIntStateOf(0)
@@ -44,12 +51,77 @@ class SpotCheckConfig(
     var closeButtonStyle by mutableStateOf<Map<String, String?>>(mapOf())
     private var customEventsSpotChecks by mutableStateOf<List<Map<String, Any?>>>(listOf(mapOf()))
     var traceId: String = ""
+    var filteredSpotChecks: List<FilteredSpotCheck>? by mutableStateOf(null)
+    var classicUrl: String by mutableStateOf("")
+    var chatUrl: String by mutableStateOf("")
+    var spotCheckType: String by mutableStateOf("")
+    var spotChecksMode: String by mutableStateOf("")
+    var avatarUrl: String by mutableStateOf("")
+    var avatarEnabled: Boolean by mutableStateOf(false)
+    var isClassicLoading by  mutableStateOf(true)
+    var isChatLoading by  mutableStateOf(true)
+    var isInjected by  mutableStateOf(true)
+    var isMounted by mutableStateOf(false)
+    var classicWebViewRef by  mutableStateOf<WebView?>(null)
+    var chatWebViewRef by  mutableStateOf<WebView?>(null)
+    var activity: Activity? = null
+    var originalSoftInputMode by mutableStateOf<Int?>(null)
 
     init {
         if ( traceId.isEmpty() ) {
             traceId = generateTraceId()
         }
+        CoroutineScope(Dispatchers.IO).launch {
+            initializeWidget()
+        }
     }
+
+    private fun isChatSurvey(type: String): Boolean {
+        return type == "Conversational" ||
+                type == "CESChat" ||
+                type == "NPSChat" ||
+                type == "CSATChat"
+    }
+
+
+    private suspend fun initializeWidget() {
+        try {
+            if (targetToken.isNotEmpty() && domainName.isNotEmpty()) {
+                val sdk = "ANDROID"
+                val api = RetrofitClient.create("https://$domainName")
+                val response = api.getInitData(targetToken, sdk)
+
+                var classicIframe = false
+                var chatIframe = false
+
+                response.filteredSpotChecks.let { spotChecks: List<FilteredSpotCheck>? ->
+                    filteredSpotChecks = spotChecks
+
+                    spotChecks?.forEach { spotcheck ->
+                        val mode = spotcheck.appearance?.get("mode") as? String
+                        val surveyType = spotcheck.survey?.get("surveyType") as? String
+
+                        when (mode) {
+                            "card", "miniCard" -> classicIframe = true
+                            "fullScreen" -> {
+                                if (isChatSurvey(surveyType.toString())) {
+                                    chatIframe = true
+                                } else {
+                                    classicIframe = true
+                                }
+                            }
+                        }
+                    }
+                }
+
+                chatUrl = if (chatIframe) "https://$domainName/eui-template/chat" else ""
+                classicUrl = if (classicIframe) "https://$domainName/eui-template/classic" else ""
+            }
+        } catch (e: Exception) {
+            Log.e("SpotCheckConfig", "Error initializing widget", e)
+        }
+    }
+
 
     suspend fun sendRequestForTrackScreen(screenName: String): Boolean {
         var isSpotPassed by mutableStateOf(false)
@@ -57,10 +129,10 @@ class SpotCheckConfig(
 
         if ( this.preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null ) {
             this.preferences?.getString("SurveySparrowUUID" , null).also {
-               val tuuid = it ;
-               if(!tuuid.isNullOrEmpty()) {
-                   userDetails["uuid"] = tuuid.toString()
-               }
+                val tuuid = it ;
+                if(!tuuid.isNullOrEmpty()) {
+                    userDetails["uuid"] = tuuid.toString()
+                }
             }
         }
 
@@ -96,20 +168,11 @@ class SpotCheckConfig(
 
                 if (show) {
                     this.triggerToken = response.triggerToken
-                    response.appearance?.let { setAppearance(it) }
                     isSpotPassed = true
                     response.spotCheckId?.also { spotCheckID = it.toDouble() }
                     response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
-                    spotCheckURL =
-                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
-                    variables.forEach { (key, value) ->
-                        spotCheckURL = "$spotCheckURL&$key=$value"
-                    }
 
-                    if(sparrowLang.isNotEmpty()){
-                        spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
-                    }
-
+                    response.appearance?.let { setAppearance(it, screenName) }
                     return true
                 } else {
                     Log.d(
@@ -144,20 +207,11 @@ class SpotCheckConfig(
                         }
 
                         this.triggerToken = response.triggerToken
-                        response.appearance?.let { setAppearance(it) }
+
                         isChecksPassed = true
                         response.spotCheckId?.also { spotCheckID = it.toDouble()}
                         response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
-                        spotCheckURL =
-                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
-                        variables.forEach { (key, value) ->
-                            spotCheckURL = "$spotCheckURL&$key=$value"
-                        }
-
-                        if(sparrowLang.isNotEmpty()){
-                            spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
-                        }
-
+                        response.appearance?.let { setAppearance(it, screenName) }
                         return true
 
                     } else {
@@ -188,65 +242,41 @@ class SpotCheckConfig(
                         var selectedSpotCheck: Map<String, Any>? = null
                         var minDelay: Double = Double.POSITIVE_INFINITY
 
-                        customEventsSpotChecks.forEach { spotCheck ->
+                        for (spotCheck in customEventsSpotChecks) {
                             val checks = spotCheck["checks"] as? Map<String, Any>
                             if (checks.isNullOrEmpty()) {
-                                spotCheck.also {
-                                    selectedSpotCheck =
-                                        (it ?: mapOf()) as Map<String, Any>?
-                                }
-                                return@forEach
+                                selectedSpotCheck = (spotCheck ?: mapOf()) as Map<String, Any>?
                             } else {
                                 val afterDelay = checks["afterDelay"] as? Double
                                 val delay = afterDelay ?: Double.POSITIVE_INFINITY
                                 if (minDelay > delay) {
                                     minDelay = delay
-                                    spotCheck.also {
-                                        selectedSpotCheck = (it ?: mapOf()) as Map<String, Any>?
-                                    }
+                                    selectedSpotCheck = (spotCheck ?: mapOf()) as Map<String, Any>?
                                 }
-                            }
-
-                            selectedSpotCheck?.let { selected ->
-                                val checkCondition = selected["checks"] as? Map<String, Any>
-                                val afterDelay = checkCondition?.get("afterDelay") as? Double
-                                if (afterDelay != null) {
-                                    this.afterDelay = afterDelay
-                                }
-                            }
-                            if (!selectedSpotCheck.isNullOrEmpty()) {
-                                this.triggerToken = selectedSpotCheck?.get("triggerToken") as String
-                                setAppearance(
-                                    selectedSpotCheck?.get("appearance") as Map<String, Any>
-                                        ?: mapOf<String, Any>()
-                                )
-                                spotCheckID = selectedSpotCheck?.get("id") as Double
-                                spotCheckContactID =
-                                    (selectedSpotCheck?.get("spotCheckContact") as Map<String, Any>)?.get(
-                                        "id"
-                                    ) as Double
-
-
-                                spotCheckURL =
-                                    "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${
-                                        String.format(
-                                            "%.0f",
-                                            spotCheckContactID
-                                        )
-                                    }&traceId=$traceId&spotcheckUrl=$screenName"
-                                variables.forEach { (key, value) ->
-                                    spotCheckURL = "$spotCheckURL&$key=$value"
-                                }
-
-                                if (sparrowLang.isNotEmpty()) {
-                                    spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
-                                }
-
-                                return true
                             }
                         }
-                    }
-                    else {
+
+                        selectedSpotCheck?.let { selected ->
+                            val checkCondition = selected["checks"] as? Map<String, Any>
+                            val afterDelay = checkCondition?.get("afterDelay") as? Double
+                            if (afterDelay != null) {
+                                this.afterDelay = afterDelay
+                            }
+
+                            this.triggerToken = selected["triggerToken"] as String
+
+                            spotCheckID = selected["id"] as Double
+                            spotCheckContactID =
+                                (selected["spotCheckContact"] as Map<String, Any>)["id"] as Double
+
+                            setAppearance(
+                                selected["appearance"] as Map<String, Any>,
+                                screenName
+                            )
+                            return true
+                        }
+
+                    } else {
                         Log.d(
                             "SPOT-CHECK",
                             "MultiShow Failed"
@@ -333,21 +363,12 @@ class SpotCheckConfig(
 
                                 if (show) {
                                     this.triggerToken = response.triggerToken
-                                    response.appearance?.let { setAppearance(it) }
                                     isSpotPassed = true
                                     response.spotCheckId?.also { spotCheckID = it.toDouble() }
                                     response.spotCheckContactId?.also {
                                         spotCheckContactID = it.toDouble()
                                     }
-                                    spotCheckURL =
-                                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
-                                    variables.forEach { (key, value) ->
-                                        spotCheckURL = "$spotCheckURL&$key=$value"
-                                    }
-
-                                    if(sparrowLang.isNotEmpty()){
-                                        spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
-                                    }
+                                    response.appearance?.let { setAppearance(it, screenName) }
 
                                     return true
                                 } else {
@@ -387,22 +408,13 @@ class SpotCheckConfig(
                                         }
 
                                         this.triggerToken = response.triggerToken
-                                        response.appearance?.let { setAppearance(it) }
                                         isChecksPassed = true
                                         response.spotCheckId?.also { spotCheckID = it.toDouble() }
                                         response.spotCheckContactId?.also {
                                             spotCheckContactID = it.toDouble()
                                         }
-                                        spotCheckURL =
-                                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
-                                        variables.forEach { (key, value) ->
-                                            spotCheckURL = "$spotCheckURL&$key=$value"
-                                        }
 
-                                        if(sparrowLang.isNotEmpty()){
-                                            spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
-                                        }
-
+                                        response.appearance?.let { setAppearance(it, screenName) }
                                         return true
                                     } else {
                                         Log.d(
@@ -433,11 +445,55 @@ class SpotCheckConfig(
     }
 
     fun onClose() {
+
+        val targetWebView = if (spotCheckType == "chat") chatWebViewRef else classicWebViewRef
+
+        val jsToInject = """
+        (function() {
+            window.dispatchEvent(new MessageEvent('message', {
+                data: {"type":"UNMOUNT_APP"}
+            }));
+        })();
+    """.trimIndent()
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                withContext(Dispatchers.Main) {
+                    targetWebView?.evaluateJavascript(jsToInject, null)
+                }
+            } catch (e: Exception) {
+                Log.e("SpotCheck", "Exception: ${e.message}", e)
+            }
+        }
+
         isVisible = false
+        isFullScreenMode = false
+        spotCheckID = 0.0;
+        position = "bottom"
+        currentQuestionHeight = 0.0
+        isCloseButtonEnabled = false
+        spotCheckContactID = 0.0
+        spotCheckURL = ""
+        isMounted = false
+        isInjected = false
+        spotChecksMode = ""
+        avatarEnabled = false
+        avatarUrl =  ""
+        activity?.runOnUiThread {
+            originalSoftInputMode?.let {
+                activity?.window?.setSoftInputMode(it)
+            }
+        }
+
+
     }
 
     fun openSpot() {
+        activity?.runOnUiThread {
+            activity?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        }
         isVisible = true
+
     }
 
     private suspend fun getScreenResolution(): ScreenResolution {
@@ -453,30 +509,128 @@ class SpotCheckConfig(
         return dateFormat.format(Date())
     }
 
-    private fun setAppearance(appearance: Map<String, Any>) {
-        val position = appearance["position"] as? String
-        val isCloseButtonEnabled = appearance["closeButton"] as? Boolean
-        val cardProp = appearance["cardProperties"] as? Map<String, Any>
-        val colors = appearance["colors"] as? Map<String, Any>
-        val overrides = colors?.get("overrides") as? Map<String, String>
 
-        position?.let { pos ->
-            if (pos == "top_full") this.position = "top"
-            else if (pos == "center_center") this.position = "center"
-            else this.position = "bottom"
+
+
+    private fun setAppearance(responseJson: Map<String, Any>, screen: String) {
+        if (responseJson.isEmpty()) return
+
+        val appearance = responseJson as? Map<String, Any> ?: emptyMap()
+        val currentSpotCheck = filteredSpotChecks?.find { spotcheck: FilteredSpotCheck ->
+            val id = spotcheck.id
+
+            id == spotCheckID.toInt()
         }
-        this.isCloseButtonEnabled = isCloseButtonEnabled ?: false
 
-        val mxHeight = cardProp?.get("maxHeight") as? Double
-            ?: (cardProp?.get("maxHeight") as? String)?.toDouble() ?: 1.0
-        this.maxHeight = mxHeight / 100
 
-        this.isFullScreenMode = appearance["mode"] as? String == "fullScreen"
 
-        val bannerImage = appearance["bannerImage"] as? Map<String, Any>
-        bannerImage?.let { banner ->
-            this.isBannerImageOn = banner["enabled"] as? Boolean ?: false
+        val chat = ((currentSpotCheck?.survey)?.get("surveyType") as? String)?.let {
+            isChatSurvey(
+                it
+            )
+        } == true && appearance["mode"] == "fullScreen"
+
+        spotChecksMode = (appearance["mode"] as? String).toString()
+        avatarEnabled = (appearance["avatar"] as? Map<*, *>)?.get("enabled") as? Boolean ?: false
+        avatarUrl = (appearance["avatar"] as? Map<*, *>)?.get("avatarUrl") as? String ?: ""
+        spotCheckType = if (chat) "chat" else "classic"
+
+        when (appearance["position"]) {
+            "top_full" -> position = "top"
+            "center_center" -> position = "center"
+            "bottom_full" -> position = "bottom"
         }
-        overrides?.let { closeButtonStyle = it }
+
+
+        isCloseButtonEnabled = appearance["closeButton"] as? Boolean ?: false
+        closeButtonStyle = (appearance["colors"] as? Map<*, *>)?.get("overrides") as? Map<String, String> ?: emptyMap()
+
+        (appearance["cardProperties"] as? Map<*, *>)?.get("maxHeight")?.let {
+            maxHeight = it.toString().toDoubleOrNull()?.div(100) ?: 1.0
+        }
+
+        isFullScreenMode = appearance["mode"] == "fullScreen"
+
+        isBannerImageOn = (appearance["bannerImage"] as? Map<*, *>)?.get("enabled") as? Boolean ?: false
+
+        val sb = StringBuilder("https://$domainName/n/spotcheck/$triggerToken/${if (chat) "config" else "bootstrap"}")
+        sb.append("?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}")
+        sb.append("&traceId=$traceId")
+        sb.append("&spotcheckUrl=$screen")
+        variables.forEach { (key, value) -> sb.append("&$key=$value") }
+        val fullUrl = sb.toString()
+        spotCheckURL = fullUrl
+        CoroutineScope(Dispatchers.IO).launch {
+
+            try {
+                val apiService = RetrofitClient.create("https://$domainName")
+
+                val response = apiService.contentApi(spotCheckURL)
+
+
+                val responseBodyString = response.body()?.string()
+
+
+                val gson = Gson()
+                val dataType = object : TypeToken<Map<String, Any?>>() {}.type
+                val data: Map<String, Any?> = gson.fromJson(responseBodyString, dataType)
+
+
+
+                val config = data["config"] as? Map<*, *>
+                    val themeInfo = config?.get("generatedCSS")
+
+                    val themePayload = mapOf(
+                        "type" to "THEME_UPDATE_SPOTCHECK",
+                        "themeInfo" to themeInfo
+                    )
+
+                    val payload = mapOf(
+                        "type" to "RESET_STATE",
+                        "state" to mapOf<String, Any?>(
+                            *(data.map { it.key to it.value }.toTypedArray()),
+                            "skip" to true,
+                            "spotCheckAppearance" to appearance + ("targetType" to "MOBILE"),
+                            "spotcheckUrl" to screen,
+                            "traceId" to traceId,
+                            "elementBuilderParams" to (variables ?: emptyMap())
+                        ) as Map<String, Map<String, Any>>
+                    )
+
+
+
+
+                    val js = """
+                    (function() {
+                        window.dispatchEvent(new MessageEvent('message', { data: ${gson.toJson(payload)} }));
+                        window.dispatchEvent(new MessageEvent('message', { data: ${gson.toJson(themePayload)} }));
+                    })();
+                """.trimIndent()
+
+
+
+                    withContext(Dispatchers.Main) {
+                        val webView = if (chat) chatWebViewRef else classicWebViewRef
+                        val isLoading = if (chat) isChatLoading else isClassicLoading
+
+                        if (!isLoading) {
+                            webView?.evaluateJavascript(js, null)
+                            isInjected = true
+                        } else {
+                            snapshotFlow { isClassicLoading }
+                                .filter { !it }
+                                .first()
+                                .let {
+                                    webView?.evaluateJavascript(js, null)
+                                    isInjected = true
+                                }
+
+                        }
+                    }
+
+            } catch (e: Exception) {
+                Log.e("SpotCheck", "Exception: ${e.message}", e)
+            }
+        }
     }
 }

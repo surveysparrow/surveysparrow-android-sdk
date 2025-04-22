@@ -1,17 +1,23 @@
 package com.surveysparrow.surveysparrow_android_sdk
-
 import android.util.Log
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.Response
+import okhttp3.Response as responseOkHttp3
+import okhttp3.ResponseBody
 import retrofit2.Retrofit
+import retrofit2.Response
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.GET
 import retrofit2.http.Path
+import retrofit2.http.Query
+import retrofit2.http.Url
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+
+
 
 object RetrofitClient {
     fun create(baseUrl: String): ApiService {
@@ -32,7 +38,20 @@ object RetrofitClient {
     }
 }
 
+
 interface ApiService {
+
+    @GET("/api/internal/spotcheck/widget/{token}/init")
+    suspend fun getInitData(
+        @Path("token") token: String,
+        @Query("sdk") sdk: String
+    ): InitResponse
+
+    @GET
+    suspend fun contentApi(
+        @Url fullUrl: String,
+    ): Response<ResponseBody>
+
     @POST("/api/internal/spotcheck/widget/{targetToken}/properties")
     suspend fun fetchProperties(
         @Path("targetToken") targetToken: String,
@@ -54,12 +73,12 @@ interface ApiService {
 
 class ErrorInterceptor : Interceptor {
     @Throws(IOException::class)
-    override fun intercept(chain: Interceptor.Chain): Response {
+    override fun intercept(chain: Interceptor.Chain): responseOkHttp3 {
         val request = chain.request()
         val response = chain.proceed(request)
 
         if (!response.isSuccessful) {
-            Log.d("SPOT-CHECK-${response.code().toString()}", response.message())
+            Log.d("SPOT-CHECK-${response.code.toString()}", response.message)
         }
 
         return response
@@ -75,6 +94,24 @@ data class EventRequestPayload(
     val spotCheckId: Int,
     val eventTrigger: Map<String, Map<String, Any>>,
     val traceId: String,
+)
+
+data class InitResponse(
+    val account: Map<String, Any>?,
+    val filteredSpotChecks: List<FilteredSpotCheck>?,
+    val config: Map<String, Any>?,
+)
+
+
+
+data class FilteredSpotCheck(
+    val id: Int?,
+    val spots: Map<String, Any>?,
+    val survey_id: Int?,
+    val appearance: Map<String, Any>?,
+    val channel_id: Int,
+    val nps_channel_id: Int?,
+    val survey: Map<String, Any>?
 )
 
 data class EventApiResponse(

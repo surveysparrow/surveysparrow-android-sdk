@@ -226,7 +226,13 @@ public final class SsSurveyFragment extends Fragment {
         closeButtonParams.setMargins(0, marginInPx, marginInPx, 0);
         closeButton.setLayoutParams(closeButtonParams);
         constraintLayout.addView(closeButton);
-        HashMap properties = survey.getProperties();
+
+        HashMap properties;
+        if (survey.getProperties() != null) {
+            properties = survey.getProperties();
+        } else {
+            properties = new HashMap<>();
+        }
 
         // Set an OnClickListener for the close button
         closeButton.setOnClickListener(new View.OnClickListener() {

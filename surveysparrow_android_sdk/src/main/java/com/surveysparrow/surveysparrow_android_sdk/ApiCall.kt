@@ -11,6 +11,7 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.Url
@@ -50,6 +51,7 @@ interface ApiService {
     @GET
     suspend fun contentApi(
         @Url fullUrl: String,
+        @Header("User-Agent") userAgent: String
     ): Response<ResponseBody>
 
     @POST("/api/internal/spotcheck/widget/{targetToken}/properties")
@@ -183,7 +185,8 @@ data class SpotCheckData(
 )
 
 data class SpotCheckDataDetails(
-    val currentQuestionSize: CurrentQuestionSize
+    val currentQuestionSize: CurrentQuestionSize?,
+    val isCloseButtonEnabled: Boolean?
 )
 
 data class CurrentQuestionSize(

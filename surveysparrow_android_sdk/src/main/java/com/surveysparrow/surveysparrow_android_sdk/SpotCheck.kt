@@ -297,21 +297,6 @@ fun SpotCheck(config: SpotCheckConfig) {
                                         ViewGroup.LayoutParams.MATCH_PARENT,
                                         ViewGroup.LayoutParams.MATCH_PARENT
                                     )
-                                    addJavascriptInterface(object : Any() {
-                                        @JavascriptInterface
-                                        fun onMessageReceive(message: String) {
-                                            val gson = Gson()
-                                            val spotCheckData: SpotCheckData =
-                                                gson.fromJson(message, SpotCheckData::class.java)
-                                            if (spotCheckData.type == "spotCheckData") {
-                                                config.currentQuestionHeight =
-                                                    spotCheckData.data?.currentQuestionSize?.height!!
-                                            }
-                                            if (spotCheckData.type == "surveyCompleted") {
-                                                config.onClose()
-                                            }
-                                        }
-                                    }, "Android")
 
 
                                     addJavascriptInterface(object {
@@ -319,6 +304,19 @@ fun SpotCheck(config: SpotCheckConfig) {
                                         fun postMessage(message: String) {
                                             val gson = Gson()
                                             val spotCheckData: SpotCheckData = gson.fromJson(message, SpotCheckData::class.java)
+
+                                            if (spotCheckData.type == "spotCheckData") {
+                                                val data = spotCheckData.data
+
+                                                if(data.currentQuestionSize!=null){
+                                                    config.currentQuestionHeight = spotCheckData.data.currentQuestionSize?.height ?: 0.0
+                                                }
+                                                else if(data.isCloseButtonEnabled == true){
+                                                        config.isCloseButtonEnabled = spotCheckData.data.isCloseButtonEnabled
+                                                            ?:false
+                                                }
+                                            }
+
 
                                             if (spotCheckData.type == "slideInFrame") {
                                                 config.isMounted = true

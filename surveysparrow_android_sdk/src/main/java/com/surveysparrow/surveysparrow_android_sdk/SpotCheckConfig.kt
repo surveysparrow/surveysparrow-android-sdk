@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import android.os.Build
 
 class SpotCheckConfig(
     var domainName: String,
@@ -510,6 +511,29 @@ class SpotCheckConfig(
     }
 
 
+    private suspend fun getUserAgent(): String {
+        var userAgent = "Mozilla/5.0 "
+
+        val displayMetrics = Resources.getSystem().displayMetrics
+        val devicePixelRatio = displayMetrics.density.toInt()
+        val width = displayMetrics.widthPixels
+        val height = displayMetrics.heightPixels
+
+        val isTablet = when {
+            devicePixelRatio < 2 && (width >= 1000 || height >= 1000) -> true
+            devicePixelRatio == 2 && (width >= 1920 || height >= 1920) -> true
+            else -> false
+        }
+
+        val deviceType = if (isTablet) "Tablet" else "Mobile"
+        val androidVersion = Build.VERSION.RELEASE
+
+        userAgent += "(Linux; Android $androidVersion; $deviceType) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Mobile Safari/537.36"
+
+        return userAgent
+    }
+
+
 
 
     private fun setAppearance(responseJson: Map<String, Any>, screen: String) {
@@ -564,13 +588,12 @@ class SpotCheckConfig(
 
             try {
                 val apiService = RetrofitClient.create("https://$domainName")
-
-                val response = apiService.contentApi(spotCheckURL)
+                val userAgent = getUserAgent()
+                Log.d("useragent", userAgent)
+                val response = apiService.contentApi(spotCheckURL, userAgent)
 
 
                 val responseBodyString = response.body()?.string()
-
-
                 val gson = Gson()
                 val dataType = object : TypeToken<Map<String, Any?>>() {}.type
                 val data: Map<String, Any?> = gson.fromJson(responseBodyString, dataType)

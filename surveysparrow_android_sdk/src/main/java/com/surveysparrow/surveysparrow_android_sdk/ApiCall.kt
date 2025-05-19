@@ -45,7 +45,6 @@ interface ApiService {
     @GET("/api/internal/spotcheck/widget/{token}/init")
     suspend fun getInitData(
         @Path("token") token: String,
-        @Query("sdk") sdk: String
     ): InitResponse
 
     @GET
@@ -57,12 +56,15 @@ interface ApiService {
     @POST("/api/internal/spotcheck/widget/{targetToken}/properties")
     suspend fun fetchProperties(
         @Path("targetToken") targetToken: String,
+        @Query("sdk") sdk: String,
+        @Query("isSpotCheck") isSpotCheck: Boolean,
         @Body payload: PropertiesRequestPayload
     ): PropertiesApiResponse
 
     @POST("/api/internal/spotcheck/widget/{targetToken}/eventTrigger")
     suspend fun sendEventTrigger(
         @Path("targetToken") targetToken: String,
+        @Query("isSpotCheck") isSpotCheck: Boolean,
         @Body payload: EventRequestPayload
     ): EventApiResponse
 

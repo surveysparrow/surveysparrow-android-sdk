@@ -88,9 +88,8 @@ class SpotCheckConfig(
     private suspend fun initializeWidget() {
         try {
             if (targetToken.isNotEmpty() && domainName.isNotEmpty()) {
-                val sdk = "ANDROID"
                 val api = RetrofitClient.create("https://$domainName")
-                val response = api.getInitData(targetToken, sdk)
+                val response = api.getInitData(targetToken)
 
                 var classicIframe = false
                 var chatIframe = false
@@ -153,8 +152,9 @@ class SpotCheckConfig(
                 traceId = traceId
             )
             customEventsSpotChecks = listOf(mapOf())
+
             val apiService = RetrofitClient.create("https://${domainName}")
-            val response = apiService.fetchProperties(targetToken, payload)
+            val response = apiService.fetchProperties(targetToken, "ANDROID", true, payload)
             Log.i("sendRequestForTrackScreen", response.toString())
 
             if (preferences != null && response.uuid != null){
@@ -356,7 +356,7 @@ class SpotCheckConfig(
                             )
 
                             val apiService = RetrofitClient.create("https://${domainName}")
-                            val response = apiService.sendEventTrigger(targetToken, payload)
+                            val response = apiService.sendEventTrigger(targetToken, true, payload)
                             Log.i("sendEventTriggerRequest", response.toString())
 
                             if (response.show != null) {
@@ -446,7 +446,6 @@ class SpotCheckConfig(
     }
 
     fun onClose() {
-
         val targetWebView = if (spotCheckType == "chat") chatWebViewRef else classicWebViewRef
 
         val jsToInject = """
@@ -534,7 +533,24 @@ class SpotCheckConfig(
     }
 
 
+    suspend fun closeSpotCheck() {
+        try {
+            val apiService = RetrofitClient.create("https://${domainName}")
+            val payload = DismissPayload(
+                traceId = traceId,
+                triggerToken = triggerToken
+            )
 
+            val response =
+                apiService.closeSpotCheck(spotCheckContactID = String.format("%.0f", spotCheckContactID), payload = payload)
+            if (response.success == true) {
+                Log.i("SPOT-CHECK", "CloseSpotCheck: Success")
+            }
+        } catch (e: Exception) {
+            Log.i("SPOT-CHECK", "$e")
+        }
+
+    }
 
     private fun setAppearance(responseJson: Map<String, Any>, screen: String) {
         if (responseJson.isEmpty()) return
@@ -581,6 +597,7 @@ class SpotCheckConfig(
         sb.append("?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}")
         sb.append("&traceId=$traceId")
         sb.append("&spotcheckUrl=$screen")
+
         variables.forEach { (key, value) -> sb.append("&$key=$value") }
         val fullUrl = sb.toString()
         spotCheckURL = fullUrl

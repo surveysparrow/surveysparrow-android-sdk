@@ -189,7 +189,8 @@ fun SpotCheck(config: SpotCheckConfig) {
 
     if (isButtonClicked) {
         LaunchedEffect(true) {
-            closeSpotCheck(config)
+            config.closeSpotCheck()
+            config.onClose()
         }
     }
 
@@ -254,7 +255,7 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     .size(32.dp)
                                     .clip(CircleShape)
                                     .background(Color.White)
-                                    .clickable { config.onClose() }
+                                    .clickable { isButtonClicked=true }
                                     .shadow(
                                         elevation = 4.dp,
                                         shape = CircleShape,
@@ -411,7 +412,6 @@ fun SpotCheck(config: SpotCheckConfig) {
                             IconButton(
                                 onClick = {
                                     isButtonClicked = true
-                                    config.onClose()
                                 },
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
@@ -524,7 +524,17 @@ fun SpotCheck(config: SpotCheckConfig) {
                                         val gson = Gson()
                                         val spotCheckData: SpotCheckData =
                                             gson.fromJson(message, SpotCheckData::class.java)
+                                        if (spotCheckData.type == "spotCheckData") {
+                                            val data = spotCheckData.data
 
+                                            if(data.currentQuestionSize!=null){
+                                                config.currentQuestionHeight = spotCheckData.data.currentQuestionSize?.height ?: 0.0
+                                            }
+                                            else if(data.isCloseButtonEnabled == true){
+                                                config.isCloseButtonEnabled = spotCheckData.data.isCloseButtonEnabled
+                                                    ?:false
+                                            }
+                                        }
                                         if (spotCheckData.type == "slideInFrame") {
                                             config.isMounted = true
                                         }
@@ -600,7 +610,7 @@ fun SpotCheck(config: SpotCheckConfig) {
                         IconButton(
                             onClick = {
                                 isButtonClicked = true
-                                config.onClose()
+
                             },
                             modifier = Modifier
                                 .align(Alignment.TopEnd)

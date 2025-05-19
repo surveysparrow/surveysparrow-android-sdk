@@ -70,7 +70,6 @@ fun Main() {
             variables = mapOf(),
             customProperties = mapOf(),
             preferences = context.getSharedPreferences("spotcheck", Context.MODE_PRIVATE),
-            sparrowLang = ""
         )
     }
 

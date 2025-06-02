@@ -52,6 +52,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.view.View
+import android.webkit.PermissionRequest
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -65,6 +66,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.zIndex
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 
 
@@ -86,6 +89,8 @@ fun SpotCheck(config: SpotCheckConfig) {
         colorValue = config.closeButtonStyle["ctaButton"] as String
     }
 
+    var pendingPermissionRequest: PermissionRequest? = null
+    val REQUEST_CODE_PERMISSIONS = 1234
 
     val minHeight = minOf(config.currentQuestionHeight.dp, (config.maxHeight * configuration.screenHeightDp).dp)
     val additionalHeight = if (config.isBannerImageOn) 90.dp else 0.dp
@@ -93,7 +98,27 @@ fun SpotCheck(config: SpotCheckConfig) {
 
     var mUploadMessage: ValueCallback<Uri?>? by remember { mutableStateOf(null) }
     var mUploadMessageArray: ValueCallback<Array<Uri?>?>? by remember { mutableStateOf(null) }
+    var audioPermissionGranted by remember { mutableStateOf(false) }
 
+
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        audioPermissionGranted = isGranted
+    }
+
+    LaunchedEffect(Unit) {
+        val isAlreadyGranted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!isAlreadyGranted) {
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        } else {
+            audioPermissionGranted = true
+        }
+    }
 
     fun extractActivity(context: Context): Activity? {
         var ctx = context
@@ -399,6 +424,35 @@ fun SpotCheck(config: SpotCheckConfig) {
                                             }
                                             return true
                                         }
+
+                                        override fun onPermissionRequest(request: PermissionRequest) {
+                                            (context as? Activity)?.runOnUiThread {
+                                                val requestedResources = request.resources
+
+                                                val permissions = requestedResources.mapNotNull {
+                                                    when (it) {
+                                                        PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
+                                                        else -> null
+                                                    }
+                                                }
+
+                                                val allGranted = permissions.all {
+                                                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                                                }
+
+                                                if (allGranted) {
+                                                    request.grant(request.resources)
+                                                } else {
+                                                    pendingPermissionRequest = request
+                                                    ActivityCompat.requestPermissions(
+                                                        context,
+                                                        permissions.toTypedArray(),
+                                                        REQUEST_CODE_PERMISSIONS
+                                                    )
+                                                }
+                                            }
+                                        }
+
                                     }
 
                                     loadUrl(config.classicUrl)
@@ -598,6 +652,34 @@ fun SpotCheck(config: SpotCheckConfig) {
                                             }
                                         }
                                         return true
+                                    }
+
+                                    override fun onPermissionRequest(request: PermissionRequest) {
+                                        (context as? Activity)?.runOnUiThread {
+                                            val requestedResources = request.resources
+
+                                            val permissions = requestedResources.mapNotNull {
+                                                when (it) {
+                                                    PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
+                                                    else -> null
+                                                }
+                                            }
+
+                                            val allGranted = permissions.all {
+                                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                                            }
+
+                                            if (allGranted) {
+                                                request.grant(request.resources)
+                                            } else {
+                                                pendingPermissionRequest = request
+                                                ActivityCompat.requestPermissions(
+                                                    context,
+                                                    permissions.toTypedArray(),
+                                                    REQUEST_CODE_PERMISSIONS
+                                                )
+                                            }
+                                        }
                                     }
                                 }
 

@@ -22,7 +22,8 @@ class SpotCheckConfig(
     private var variables: Map<String, Any> = mapOf(),
     private var customProperties: Map<String, Any> = mapOf(),
     var preferences: SharedPreferences? = null,
-    private var sparrowLang: String = ""
+    private var sparrowLang: String = "",
+    var spotCheckListener:SsSpotcheckListener? = null
 ) {
     var position by mutableStateOf("")
     var spotCheckURL by mutableStateOf("")
@@ -101,7 +102,7 @@ class SpotCheckConfig(
                     response.spotCheckId?.also { spotCheckID = it.toDouble() }
                     response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                     spotCheckURL =
-                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
                     variables.forEach { (key, value) ->
                         spotCheckURL = "$spotCheckURL&$key=$value"
                     }
@@ -149,7 +150,7 @@ class SpotCheckConfig(
                         response.spotCheckId?.also { spotCheckID = it.toDouble()}
                         response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                         spotCheckURL =
-                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
                         variables.forEach { (key, value) ->
                             spotCheckURL = "$spotCheckURL&$key=$value"
                         }
@@ -233,7 +234,7 @@ class SpotCheckConfig(
                                             "%.0f",
                                             spotCheckContactID
                                         )
-                                    }&traceId=$traceId&spotcheckUrl=$screenName"
+                                    }&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
                                 variables.forEach { (key, value) ->
                                     spotCheckURL = "$spotCheckURL&$key=$value"
                                 }
@@ -340,7 +341,7 @@ class SpotCheckConfig(
                                         spotCheckContactID = it.toDouble()
                                     }
                                     spotCheckURL =
-                                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
                                     variables.forEach { (key, value) ->
                                         spotCheckURL = "$spotCheckURL&$key=$value"
                                     }
@@ -394,7 +395,7 @@ class SpotCheckConfig(
                                             spotCheckContactID = it.toDouble()
                                         }
                                         spotCheckURL =
-                                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&spotcheckUrl=$screenName"
+                                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
                                         variables.forEach { (key, value) ->
                                             spotCheckURL = "$spotCheckURL&$key=$value"
                                         }

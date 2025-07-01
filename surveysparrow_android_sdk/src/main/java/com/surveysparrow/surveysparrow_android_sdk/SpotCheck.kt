@@ -281,12 +281,6 @@ fun SpotCheck(config: SpotCheckConfig) {
                                             }
                                         }
 
-                                        if (type == "partialSubmission") {
-                                            CoroutineScope(Dispatchers.IO).launch {
-                                                config.spotCheckListener?.onPartialSubmission(spotCheckData)
-                                            }
-                                        }
-
                                     }
 
                                 }, "SsAndroidSdk")

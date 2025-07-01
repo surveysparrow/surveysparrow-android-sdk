@@ -65,32 +65,17 @@ fun Main() {
     val context = LocalContext.current
     val spotCheckListener = object : SsSpotcheckListener {
         override suspend fun onSurveyLoaded(response: Map<String, Any>) {
-            println("🟢 Loaded: $response")
+            println("Loaded: $response")
         }
 
         override suspend fun onSurveyResponse(response: Map<String, Any>) {
-            println("✅ Response: $response")
+            println("Response: $response")
         }
 
         override suspend fun onCloseButtonTap() {
-            println("❌ Close tapped")
-
-            // Simulate async work (e.g., closing animation, saving state)
-            delay(1500) // 1.5 seconds
-
-            println("✅ Cleanup completed after delay")
+            println("User closed the SpotChecks")
         }
 
-        override suspend fun onPartialSubmission(response: Map<String, Any>) {
-
-
-            println("# Partial suBMISIONS")
-
-
-            delay(1500) // 1.5 seconds
-
-            println("✅ Response: $response")
-        }
     }
 
     val spotCheckConfig = remember {

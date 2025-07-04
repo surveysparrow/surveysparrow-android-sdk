@@ -236,6 +236,31 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     }
                                 }, "Android")
 
+                                addJavascriptInterface(object {
+                                    @JavascriptInterface
+                                    fun postMessage(message: String) {
+                                        val gson = Gson()
+                                        val spotCheckData: SpotCheckData = gson.fromJson(message, SpotCheckData::class.java)
+
+                                        if (spotCheckData.type == "spotCheckData") {
+                                            val isCloseButtonEnabled = spotCheckData.data?.get("isCloseButtonEnabled") as? Boolean
+
+
+                                            if(isCloseButtonEnabled == true){
+                                                config.isCloseButtonEnabled = isCloseButtonEnabled
+                                                val data: Map<String, Any> = mapOf(
+                                                    "type" to "surveySubmitted",
+                                                    "data" to mapOf<String, Any>() // or a nested map with actual data
+                                                )
+                                                CoroutineScope(Dispatchers.IO).launch {
+                                                    config.spotCheckListener?.onSurveyResponse(data);
+                                                    // safe call inside coroutine
+                                                }
+                                            }
+                                        }
+                                    }
+                                }, "flutterSpotCheckData")
+
 
                                 addJavascriptInterface(object : Any() {
                                     @JavascriptInterface

@@ -1,6 +1,9 @@
 package com.surveysparrow.surveysparrow_android_sdk
 
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 suspend fun closeSpotCheck(config: SpotCheckConfig) {
@@ -21,6 +24,10 @@ suspend fun closeSpotCheck(config: SpotCheckConfig) {
             config.closeButtonStyle = mapOf()
             config.spotCheckContactID = 0.0
             config.spotCheckURL = ""
+            CoroutineScope(Dispatchers.Main).launch {
+                config.spotCheckListener?.onCloseButtonTap()
+            }
+
         }
     } catch (e: Exception) {
         Log.i("SPOT-CHECK", "$e")

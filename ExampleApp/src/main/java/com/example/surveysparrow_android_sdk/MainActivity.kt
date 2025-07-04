@@ -1,4 +1,5 @@
 package com.example.surveysparrow_android_sdk
+import kotlinx.coroutines.delay
 
 import android.content.Context
 import android.os.Bundle
@@ -37,6 +38,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.surveysparrow_android_sdk.ui.theme.SurveysparrowandroidsdkTheme
 import com.surveysparrow.surveysparrow_android_sdk.SpotCheck
 import com.surveysparrow.surveysparrow_android_sdk.SpotCheckConfig
+import com.surveysparrow.surveysparrow_android_sdk.SsSpotcheckListener
 import com.surveysparrow.surveysparrow_android_sdk.trackEvent
 import com.surveysparrow.surveysparrow_android_sdk.trackScreen
 
@@ -61,6 +63,20 @@ class MainActivity : ComponentActivity() {
 fun Main() {
 
     val context = LocalContext.current
+    val spotCheckListener = object : SsSpotcheckListener {
+        override suspend fun onSurveyLoaded(response: Map<String, Any>) {
+            println("Loaded: $response")
+        }
+
+        override suspend fun onSurveyResponse(response: Map<String, Any>) {
+            println("Response: $response")
+        }
+
+        override suspend fun onCloseButtonTap() {
+            println("User closed the SpotChecks")
+        }
+
+    }
 
     val spotCheckConfig = remember {
         SpotCheckConfig(
@@ -70,7 +86,8 @@ fun Main() {
             variables = mapOf(),
             customProperties = mapOf(),
             preferences = context.getSharedPreferences("spotcheck", Context.MODE_PRIVATE),
-            sparrowLang = ""
+            sparrowLang = "",
+            spotCheckListener=spotCheckListener
         )
     }
 

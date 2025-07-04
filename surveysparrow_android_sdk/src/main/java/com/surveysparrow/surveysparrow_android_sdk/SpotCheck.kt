@@ -53,6 +53,10 @@ import java.io.FileOutputStream
 import java.io.IOException
 import android.Manifest
 import android.annotation.SuppressLint
+import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -213,18 +217,50 @@ fun SpotCheck(config: SpotCheckConfig) {
                                 addJavascriptInterface(object : Any() {
                                     @JavascriptInterface
                                     fun onMessageReceive(message: String) {
+
                                         val gson = Gson()
                                         val spotCheckData: SpotCheckData =
                                             gson.fromJson(message, SpotCheckData::class.java)
                                         if (spotCheckData.type == "spotCheckData") {
-                                            config.currentQuestionHeight =
-                                                spotCheckData.data.currentQuestionSize.height
+                                            val currentSize = spotCheckData.data?.get("currentQuestionSize") as? Map<String, Any>
+                                            val height = currentSize?.get("height") as Double // or Double, depending on your data
+                                            config.currentQuestionHeight = height
                                         }
                                         if (spotCheckData.type == "surveyCompleted") {
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                config.spotCheckListener?.onSurveyResponse(spotCheckData.data)  // ✅ safe call inside coroutine
+                                            }
+
                                             config.onClose()
                                         }
                                     }
                                 }, "Android")
+
+                                addJavascriptInterface(object {
+                                    @JavascriptInterface
+                                    fun postMessage(message: String) {
+                                        val gson = Gson()
+                                        val spotCheckData: SpotCheckData = gson.fromJson(message, SpotCheckData::class.java)
+
+                                        if (spotCheckData.type == "spotCheckData") {
+                                            val isCloseButtonEnabled = spotCheckData.data?.get("isCloseButtonEnabled") as? Boolean
+
+
+                                            if(isCloseButtonEnabled == true){
+                                                config.isCloseButtonEnabled = isCloseButtonEnabled
+                                                val data: Map<String, Any> = mapOf(
+                                                    "type" to "surveySubmitted",
+                                                    "data" to mapOf<String, Any>() // or a nested map with actual data
+                                                )
+                                                CoroutineScope(Dispatchers.IO).launch {
+                                                    config.spotCheckListener?.onSurveyResponse(data);
+                                                    // safe call inside coroutine
+                                                }
+                                            }
+                                        }
+                                    }
+                                }, "flutterSpotCheckData")
+
 
                                 addJavascriptInterface(object : Any() {
                                     @JavascriptInterface
@@ -253,6 +289,23 @@ fun SpotCheck(config: SpotCheckConfig) {
                                                 isCaptureImageActive=false
                                             }
                                     }
+                                    }
+
+                                    @JavascriptInterface
+                                    fun shareData(message: String) {
+                                        val gson = Gson()
+                                        val spotCheckData: Map<String, Any> = gson.fromJson(
+                                            message,
+                                            object : TypeToken<Map<String, Any>>() {}.type
+                                        )
+
+                                        val type = spotCheckData["type"] as? String
+                                        if (type == "surveyLoadStarted") {
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                config.spotCheckListener?.onSurveyLoaded(spotCheckData)
+                                            }
+                                        }
+
                                     }
 
                                 }, "SsAndroidSdk")

@@ -242,21 +242,12 @@ fun SpotCheck(config: SpotCheckConfig) {
                                         val gson = Gson()
                                         val spotCheckData: SpotCheckData = gson.fromJson(message, SpotCheckData::class.java)
 
-                                        if (spotCheckData.type == "spotCheckData") {
-                                            val isCloseButtonEnabled = spotCheckData.data?.get("isCloseButtonEnabled") as? Boolean
-
-
-                                            if(isCloseButtonEnabled == true){
-                                                config.isCloseButtonEnabled = isCloseButtonEnabled
-                                                val data: Map<String, Any> = mapOf(
-                                                    "type" to "surveySubmitted",
-                                                    "data" to mapOf<String, Any>() // or a nested map with actual data
-                                                )
+                                        if (spotCheckData.type == "thankYouPageSubmission") {
+                                                config.isCloseButtonEnabled = true
                                                 CoroutineScope(Dispatchers.IO).launch {
-                                                    config.spotCheckListener?.onSurveyResponse(data);
+                                                    config.spotCheckListener?.onSurveyResponse(spotCheckData.data)
                                                     // safe call inside coroutine
                                                 }
-                                            }
                                         }
                                     }
                                 }, "flutterSpotCheckData")
@@ -303,6 +294,12 @@ fun SpotCheck(config: SpotCheckConfig) {
                                         if (type == "surveyLoadStarted") {
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 config.spotCheckListener?.onSurveyLoaded(spotCheckData)
+                                            }
+                                        }
+
+                                        if(type == "partialSubmission") {
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                config.spotCheckListener?.onPartialSubmission(spotCheckData)
                                             }
                                         }
 

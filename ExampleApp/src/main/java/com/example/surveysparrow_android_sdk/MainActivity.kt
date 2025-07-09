@@ -72,6 +72,10 @@ fun Main() {
             println("Response: $response")
         }
 
+        override suspend fun onPartialSubmission(response: Map<String, Any>) {
+            println("Partial Submission: $response")
+        }
+
         override suspend fun onCloseButtonTap() {
             println("User closed the SpotChecks")
         }

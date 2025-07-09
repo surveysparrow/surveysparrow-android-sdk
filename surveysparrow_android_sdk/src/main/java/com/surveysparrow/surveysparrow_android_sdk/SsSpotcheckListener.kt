@@ -9,4 +9,6 @@ interface SsSpotcheckListener {
 
 
     suspend fun onCloseButtonTap() {}
+
+    suspend fun onPartialSubmission(response: Map<String, Any>) {}
 }

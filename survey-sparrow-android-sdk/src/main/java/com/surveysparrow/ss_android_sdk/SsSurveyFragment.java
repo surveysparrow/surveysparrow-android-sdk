@@ -391,8 +391,16 @@ public final class SsSurveyFragment extends Fragment {
     private class JsObject {
         @JavascriptInterface
         public void shareData(String data) {
-            surveyCompleted = true;
-            onSsResponseEventListener.onSsResponseEvent(SurveySparrow.toJSON(data));
+                JSONObject json = SurveySparrow.toJSON(data);
+                String type = json.optString("type", "");
+
+                // Only trigger event if it's a final submission
+                if ("surveyCompleted".equals(type)) {
+                    surveyCompleted = true;
+                    if (onSsResponseEventListener != null) {
+                        onSsResponseEventListener.onSsResponseEvent(json);
+                    }
+                }
         }
 
         @JavascriptInterface

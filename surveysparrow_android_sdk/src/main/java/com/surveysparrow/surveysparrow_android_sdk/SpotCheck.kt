@@ -297,6 +297,18 @@ fun SpotCheck(config: SpotCheckConfig) {
                                             }
                                         }
 
+                                    }
+
+                                    @JavascriptInterface
+                                    fun sendPartialSubmissionData(message: String) {
+                                        val gson = Gson()
+                                        val spotCheckData: Map<String, Any> = gson.fromJson(
+                                            message,
+                                            object : TypeToken<Map<String, Any>>() {}.type
+                                        )
+
+                                        val type = spotCheckData["type"] as? String
+
                                         if(type == "partialSubmission") {
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 config.spotCheckListener?.onPartialSubmission(spotCheckData)

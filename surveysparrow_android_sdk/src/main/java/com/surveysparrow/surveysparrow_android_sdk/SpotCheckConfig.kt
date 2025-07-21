@@ -196,7 +196,7 @@ class SpotCheckConfig(
                                     selectedSpotCheck =
                                         (it ?: mapOf()) as Map<String, Any>?
                                 }
-                                return@forEach
+
                             } else {
                                 val afterDelay = checks["afterDelay"] as? Double
                                 val delay = afterDelay ?: Double.POSITIVE_INFINITY

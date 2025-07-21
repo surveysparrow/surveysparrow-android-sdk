@@ -57,6 +57,7 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 
 @Composable
@@ -239,15 +240,27 @@ fun SpotCheck(config: SpotCheckConfig) {
                                 addJavascriptInterface(object {
                                     @JavascriptInterface
                                     fun postMessage(message: String) {
-                                        val gson = Gson()
-                                        val spotCheckData: SpotCheckData = gson.fromJson(message, SpotCheckData::class.java)
-
-                                        if (spotCheckData.type == "thankYouPageSubmission") {
-                                                config.isCloseButtonEnabled = true
-                                                CoroutineScope(Dispatchers.IO).launch {
-                                                    config.spotCheckListener?.onSurveyResponse(spotCheckData.data)
-                                                    // safe call inside coroutine
+                                        fun postMessage(message: String) {
+                                            try {
+                                                val jsonObject = JSONObject(message)
+                                                if (!jsonObject.has("type") || jsonObject.isNull("type") || jsonObject.get("type") !is String) {
+                                                    return
                                                 }
+                                                if (!jsonObject.has("data") || jsonObject.isNull("data") || jsonObject.get("data") !is JSONObject) {
+                                                    return
+                                                }
+                                                val gson = Gson()
+                                                val spotCheckData: SpotCheckData = gson.fromJson(message, SpotCheckData::class.java)
+
+                                                if (spotCheckData.type == "thankYouPageSubmission") {
+                                                    config.isCloseButtonEnabled = true
+                                                    CoroutineScope(Dispatchers.IO).launch {
+                                                            config.spotCheckListener?.onSurveyResponse(spotCheckData.data)
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                Log.e("SpotCheck", e.message.toString())
+                                            }
                                         }
                                     }
                                 }, "flutterSpotCheckData")

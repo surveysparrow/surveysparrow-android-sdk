@@ -240,7 +240,7 @@ fun SpotCheck(config: SpotCheckConfig) {
                                 addJavascriptInterface(object {
                                     @JavascriptInterface
                                     fun postMessage(message: String) {
-                                        fun postMessage(message: String) {
+
                                             try {
                                                 val jsonObject = JSONObject(message)
                                                 if (!jsonObject.has("type") || jsonObject.isNull("type") || jsonObject.get("type") !is String) {
@@ -261,7 +261,7 @@ fun SpotCheck(config: SpotCheckConfig) {
                                             } catch (e: Exception) {
                                                 Log.e("SpotCheck", e.message.toString())
                                             }
-                                        }
+
                                     }
                                 }, "flutterSpotCheckData")
 

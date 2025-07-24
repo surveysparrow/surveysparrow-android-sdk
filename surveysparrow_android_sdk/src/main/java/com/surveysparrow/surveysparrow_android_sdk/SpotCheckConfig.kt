@@ -23,7 +23,7 @@ class SpotCheckConfig(
     private var customProperties: Map<String, Any> = mapOf(),
     var preferences: SharedPreferences? = null,
     private var sparrowLang: String = "",
-    var spotCheckListener:SsSpotcheckListener? = null
+    var spotCheckListener: SsSpotcheckListener? = null
 ) {
     var position by mutableStateOf("")
     var spotCheckURL by mutableStateOf("")
@@ -47,7 +47,7 @@ class SpotCheckConfig(
     var traceId: String = ""
 
     init {
-        if ( traceId.isEmpty() ) {
+        if (traceId.isEmpty()) {
             traceId = generateTraceId()
         }
     }
@@ -56,12 +56,12 @@ class SpotCheckConfig(
         var isSpotPassed by mutableStateOf(false)
         var isChecksPassed by mutableStateOf(false)
 
-        if ( this.preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null ) {
-            this.preferences?.getString("SurveySparrowUUID" , null).also {
-               val tuuid = it ;
-               if(!tuuid.isNullOrEmpty()) {
-                   userDetails["uuid"] = tuuid.toString()
-               }
+        if (this.preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null) {
+            this.preferences?.getString("SurveySparrowUUID", null).also {
+                val tuuid = it;
+                if (!tuuid.isNullOrEmpty()) {
+                    userDetails["uuid"] = tuuid.toString()
+                }
             }
         }
 
@@ -85,7 +85,7 @@ class SpotCheckConfig(
             val response = apiService.fetchProperties(targetToken, payload)
             Log.i("sendRequestForTrackScreen", response.toString())
 
-            if (preferences != null && response.uuid != null){
+            if (preferences != null && response.uuid != null) {
                 val editor = preferences!!.edit()
                 editor.putString("SurveySparrowUUID", response.uuid)
                 editor.apply()
@@ -102,12 +102,17 @@ class SpotCheckConfig(
                     response.spotCheckId?.also { spotCheckID = it.toDouble() }
                     response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                     spotCheckURL =
-                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
+                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${
+                            String.format(
+                                "%.0f",
+                                spotCheckContactID
+                            )
+                        }&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
                     variables.forEach { (key, value) ->
                         spotCheckURL = "$spotCheckURL&$key=$value"
                     }
 
-                    if(sparrowLang.isNotEmpty()){
+                    if (sparrowLang.isNotEmpty()) {
                         spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
                     }
 
@@ -139,7 +144,7 @@ class SpotCheckConfig(
                             }
                             val customEvent = condition["customEvent"] as? Map<String, Any>
                             customEventsSpotChecks = listOf(response.toMap())
-                            if(!customEvent.isNullOrEmpty()) {
+                            if (!customEvent.isNullOrEmpty()) {
                                 return false
                             }
                         }
@@ -147,15 +152,20 @@ class SpotCheckConfig(
                         this.triggerToken = response.triggerToken
                         response.appearance?.let { setAppearance(it) }
                         isChecksPassed = true
-                        response.spotCheckId?.also { spotCheckID = it.toDouble()}
+                        response.spotCheckId?.also { spotCheckID = it.toDouble() }
                         response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                         spotCheckURL =
-                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
+                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${
+                                String.format(
+                                    "%.0f",
+                                    spotCheckContactID
+                                )
+                            }&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
                         variables.forEach { (key, value) ->
                             spotCheckURL = "$spotCheckURL&$key=$value"
                         }
 
-                        if(sparrowLang.isNotEmpty()){
+                        if (sparrowLang.isNotEmpty()) {
                             spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
                         }
 
@@ -246,8 +256,7 @@ class SpotCheckConfig(
                                 return true
                             }
                         }
-                    }
-                    else {
+                    } else {
                         Log.d(
                             "SPOT-CHECK",
                             "MultiShow Failed"
@@ -299,10 +308,10 @@ class SpotCheckConfig(
                         }
                         if (selectedSpotCheckID != Int.MAX_VALUE) {
 
-                            if ( this.preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null ) {
-                                this.preferences?.getString("SurveySparrowUUID" , null).also {
-                                    val tuuid = it ;
-                                    if(!tuuid.isNullOrEmpty()) {
+                            if (this.preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null) {
+                                this.preferences?.getString("SurveySparrowUUID", null).also {
+                                    val tuuid = it;
+                                    if (!tuuid.isNullOrEmpty()) {
                                         userDetails["uuid"] = tuuid.toString()
                                     }
                                 }
@@ -341,12 +350,17 @@ class SpotCheckConfig(
                                         spotCheckContactID = it.toDouble()
                                     }
                                     spotCheckURL =
-                                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
+                                        "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${
+                                            String.format(
+                                                "%.0f",
+                                                spotCheckContactID
+                                            )
+                                        }&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
                                     variables.forEach { (key, value) ->
                                         spotCheckURL = "$spotCheckURL&$key=$value"
                                     }
 
-                                    if(sparrowLang.isNotEmpty()){
+                                    if (sparrowLang.isNotEmpty()) {
                                         spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
                                     }
 
@@ -395,12 +409,17 @@ class SpotCheckConfig(
                                             spotCheckContactID = it.toDouble()
                                         }
                                         spotCheckURL =
-                                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
+                                            "https://$domainName/n/spotcheck/$triggerToken?spotcheckContactId=${
+                                                String.format(
+                                                    "%.0f",
+                                                    spotCheckContactID
+                                                )
+                                            }&traceId=$traceId&isSpotCheck=true&spotcheckUrl=$screenName"
                                         variables.forEach { (key, value) ->
                                             spotCheckURL = "$spotCheckURL&$key=$value"
                                         }
 
-                                        if(sparrowLang.isNotEmpty()){
+                                        if (sparrowLang.isNotEmpty()) {
                                             spotCheckURL = "$spotCheckURL&sparrowLang=$sparrowLang"
                                         }
 

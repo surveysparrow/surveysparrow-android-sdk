@@ -14,7 +14,12 @@ suspend fun closeSpotCheck(config: SpotCheckConfig) {
             triggerToken = config.triggerToken
         )
         val response =
-            apiService.closeSpotCheck(spotCheckContactID = String.format("%.0f", config.spotCheckContactID), payload = payload)
+            apiService.closeSpotCheck(
+                spotCheckContactID = String.format(
+                    "%.0f",
+                    config.spotCheckContactID
+                ), payload = payload
+            )
         if (response.success == true) {
             Log.i("SPOT-CHECK", "CloseSpotCheck: Success")
             config.spotCheckID = 0.0

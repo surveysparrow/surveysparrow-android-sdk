@@ -142,11 +142,11 @@ data class ScreenResolution(
 
 data class SpotCheckData(
     val type: String,
-    val data: Map<String,Any>
+    val data: Map<String, Any>
 )
 
 
-data class DismissPayload (
+data class DismissPayload(
     val traceId: String,
     val triggerToken: String
 )

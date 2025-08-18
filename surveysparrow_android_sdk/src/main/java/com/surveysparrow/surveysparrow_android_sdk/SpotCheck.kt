@@ -356,6 +356,27 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     override fun onPageFinished(view: WebView?, url: String?) {
                                         super.onPageFinished(view, url)
                                         isLoading = false
+                                        view?.evaluateJavascript(
+                                            """
+                                            (function() {
+                                                const observer = new MutationObserver((mutations, obs) => {
+                                                    const btn = document.querySelector('.close-btn-chat--spotchecks');
+                                                    if (btn) {
+                                                    console.log("coming inside the btn");
+                                                        btn.disabled = true;
+                                                        btn.style.pointerEvents = 'none';
+                                                        btn.style.opacity = '0';
+                                                        obs.disconnect();
+                                                    }
+                                                });
+                                                observer.observe(document.body, {
+                                                    childList: true,
+                                                    subtree: true
+                                                });
+                                            })();
+                                            """.trimIndent(),
+                                            null
+                                        )
                                     }
                                 }
 

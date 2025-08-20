@@ -359,20 +359,14 @@ fun SpotCheck(config: SpotCheckConfig) {
                                         view?.evaluateJavascript(
                                             """
                                             (function() {
-                                                const observer = new MutationObserver((mutations, obs) => {
-                                                    const btn = document.querySelector('.close-btn-chat--spotchecks');
-                                                    if (btn) {
-                                                    console.log("coming inside the btn");
-                                                        btn.disabled = true;
-                                                        btn.style.pointerEvents = 'none';
-                                                        btn.style.opacity = '0';
-                                                        obs.disconnect();
+                                                const styleTag = document.createElement("style");
+                                                styleTag.innerHTML = `
+                                                    .close-btn-chat--spotchecks {
+                                                        pointer-events: none !important;
+                                                        opacity: 0 !important;
                                                     }
-                                                });
-                                                observer.observe(document.body, {
-                                                    childList: true,
-                                                    subtree: true
-                                                });
+                                                `;
+                                                document.body.appendChild(styleTag);
                                             })();
                                             """.trimIndent(),
                                             null

@@ -361,11 +361,12 @@ fun SpotCheck(config: SpotCheckConfig) {
                                             (function() {
                                                 const styleTag = document.createElement("style");
                                                 styleTag.innerHTML = `
-                                                .surveysparrow-chat__wrapper .ss-language-selector--wrapper { margin-right: 45px;                                             
-                                                }                                      
-                                                    .close-btn-chat--spotchecks {
-                                                        display: none !important;
-                                                    }                                       
+                                                       .surveysparrow-chat__wrapper .ss-language-selector--wrapper { 
+                                                            margin-right: 45px;                                             
+                                                       }                                      
+                                                       .close-btn-chat--spotchecks {
+                                                            display: none !important;
+                                                       }                                       
                                                 `;
                                                 document.body.appendChild(styleTag);
                                             })();

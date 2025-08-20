@@ -362,8 +362,7 @@ fun SpotCheck(config: SpotCheckConfig) {
                                                 const styleTag = document.createElement("style");
                                                 styleTag.innerHTML = `
                                                     .close-btn-chat--spotchecks {
-                                                        pointer-events: none !important;
-                                                        opacity: 0 !important;
+                                                       display: none !important;
                                                     }
                                                 `;
                                                 document.body.appendChild(styleTag);

@@ -356,6 +356,23 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     override fun onPageFinished(view: WebView?, url: String?) {
                                         super.onPageFinished(view, url)
                                         isLoading = false
+                                        view?.evaluateJavascript(
+                                            """
+                                            (function() {
+                                                const styleTag = document.createElement("style");
+                                                styleTag.innerHTML = `
+                                                       .surveysparrow-chat__wrapper .ss-language-selector--wrapper { 
+                                                            margin-right: 45px;                                             
+                                                       }                                      
+                                                       .close-btn-chat--spotchecks {
+                                                            display: none !important;
+                                                       }                                       
+                                                `;
+                                                document.body.appendChild(styleTag);
+                                            })();
+                                            """.trimIndent(),
+                                            null
+                                        )
                                     }
                                 }
 

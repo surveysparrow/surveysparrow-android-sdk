@@ -2,8 +2,9 @@ package com.surveysparrow.ss_android_sdk;
 import android.net.Uri;
 import androidx.annotation.IntDef;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
-import android.util.Log;
+import java.net.URLEncoder;
 
 public final class SsSurvey implements Serializable {
     private String baseUrl;
@@ -117,7 +118,12 @@ public final class SsSurvey implements Serializable {
      * multiple calls into a single statement.
      */
     public SsSurvey addCustomParam(CharSequence name, CharSequence value) {
-        customVariableString += name + "=" + value + "&";
+        try {
+            String encodedValue = URLEncoder.encode(value.toString(), "UTF-8");
+            customVariableString += name + "=" + encodedValue + "&";
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace(); // Or handle as needed
+        }
         return this;
     }
 

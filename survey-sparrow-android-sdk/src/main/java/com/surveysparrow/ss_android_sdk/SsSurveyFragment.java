@@ -349,7 +349,23 @@ public final class SsSurveyFragment extends Fragment {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_SELECT_FILE) {
             if (mUploadMessageArray == null) return;
-            Uri[] results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+
+            Uri[] results = null;
+            if (resultCode == Activity.RESULT_OK) {
+                if (data != null) {
+                    if (data.getClipData() != null) {
+                        int count = data.getClipData().getItemCount();
+                        results = new Uri[count];
+                        for (int i = 0; i < count; i++) {
+                            results[i] = data.getClipData().getItemAt(i).getUri();
+                        }
+                    }
+                    else if (data.getData() != null) {
+                        results = new Uri[]{ data.getData() };
+                    }
+                }
+            }
+
             mUploadMessageArray.onReceiveValue(results);
             mUploadMessageArray = null;
         } else if (requestCode == FILE_CHOOSER_RESULT_CODE) {

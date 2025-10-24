@@ -32,6 +32,8 @@ class SpotCheckConfig(
     private var variables: Map<String, Any> = mapOf(),
     private var customProperties: Map<String, Any> = mapOf(),
     var preferences: SharedPreferences? = null,
+    private var sparrowLang: String = "",
+    var spotCheckListener: SsSpotcheckListener? = null
 ) {
     var position by mutableStateOf("bottom")
     var spotCheckURL by mutableStateOf("")
@@ -69,7 +71,7 @@ class SpotCheckConfig(
     var originalSoftInputMode by mutableStateOf<Int?>(null)
 
     init {
-        if ( traceId.isEmpty() ) {
+        if (traceId.isEmpty()) {
             traceId = generateTraceId()
         }
         CoroutineScope(Dispatchers.IO).launch {
@@ -157,7 +159,7 @@ class SpotCheckConfig(
             val response = apiService.fetchProperties(targetToken, "ANDROID", true, payload)
             Log.i("sendRequestForTrackScreen", response.toString())
 
-            if (preferences != null && response.uuid != null){
+            if (preferences != null && response.uuid != null) {
                 val editor = preferences!!.edit()
                 editor.putString("SurveySparrowUUID", response.uuid)
                 editor.apply()
@@ -202,7 +204,7 @@ class SpotCheckConfig(
                             }
                             val customEvent = condition["customEvent"] as? Map<String, Any>
                             customEventsSpotChecks = listOf(response.toMap())
-                            if(!customEvent.isNullOrEmpty()) {
+                            if (!customEvent.isNullOrEmpty()) {
                                 return false
                             }
                         }
@@ -210,7 +212,7 @@ class SpotCheckConfig(
                         this.triggerToken = response.triggerToken
 
                         isChecksPassed = true
-                        response.spotCheckId?.also { spotCheckID = it.toDouble()}
+                        response.spotCheckId?.also { spotCheckID = it.toDouble() }
                         response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
                         response.appearance?.let { setAppearance(it, screenName) }
                         return true
@@ -329,10 +331,10 @@ class SpotCheckConfig(
                         }
                         if (selectedSpotCheckID != Int.MAX_VALUE) {
 
-                            if ( this.preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null ) {
-                                this.preferences?.getString("SurveySparrowUUID" , null).also {
-                                    val tuuid = it ;
-                                    if(!tuuid.isNullOrEmpty()) {
+                            if (this.preferences != null && userDetails["uuid"] == null && userDetails["email"] == null && userDetails["mobile"] == null) {
+                                this.preferences?.getString("SurveySparrowUUID", null).also {
+                                    val tuuid = it;
+                                    if (!tuuid.isNullOrEmpty()) {
                                         userDetails["uuid"] = tuuid.toString()
                                     }
                                 }

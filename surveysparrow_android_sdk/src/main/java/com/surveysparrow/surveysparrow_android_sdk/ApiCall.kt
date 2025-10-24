@@ -183,7 +183,7 @@ data class ScreenResolution(
 
 data class SpotCheckData(
     val type: String,
-    val data: SpotCheckDataDetails
+    val data: Map<String, Any>
 )
 
 data class SpotCheckDataDetails(
@@ -195,7 +195,7 @@ data class CurrentQuestionSize(
     val height: Double
 )
 
-data class DismissPayload (
+data class DismissPayload(
     val traceId: String,
     val triggerToken: String
 )

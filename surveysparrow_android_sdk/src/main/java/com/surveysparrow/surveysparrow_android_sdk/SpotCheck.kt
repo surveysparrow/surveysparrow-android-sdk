@@ -470,6 +470,11 @@ suspend fun trackScreen(screen: String, config: SpotCheckConfig) {
     }
 }
 
+suspend fun closeSpotchecks(config: SpotCheckConfig){
+    closeSpotCheck(config)
+    config.onClose()
+}
+
 suspend fun trackEvent(screen: String, event: Map<String, Any>, config: SpotCheckConfig) {
     val response = config.sendEventTriggerRequest(screen, event)
     if (response) {

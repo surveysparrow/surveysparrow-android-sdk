@@ -32,7 +32,6 @@ class SpotCheckConfig(
     private var variables: Map<String, Any> = mapOf(),
     private var customProperties: Map<String, Any> = mapOf(),
     var preferences: SharedPreferences? = null,
-    private var sparrowLang: String = "",
     var spotCheckListener: SsSpotcheckListener? = null
 ) {
     var position by mutableStateOf("bottom")
@@ -69,6 +68,9 @@ class SpotCheckConfig(
     var chatWebViewRef by  mutableStateOf<WebView?>(null)
     var activity: Activity? = null
     var originalSoftInputMode by mutableStateOf<Int?>(null)
+    var isSpotCheckButton by  mutableStateOf(false)
+    var spotCheckButtonConfig by mutableStateOf<Map<String, Any>>(mapOf())
+    var showSurveyContent by mutableStateOf(true)
 
     init {
         if (traceId.isEmpty()) {
@@ -116,8 +118,8 @@ class SpotCheckConfig(
                     }
                 }
 
-                chatUrl = if (chatIframe) "https://$domainName/eui-template/chat" else ""
-                classicUrl = if (classicIframe) "https://$domainName/eui-template/classic" else ""
+                chatUrl = if (chatIframe) "https://$domainName/eui-template/chat?isSpotCheck=true" else ""
+                classicUrl = if (classicIframe) "https://$domainName/eui-template/classic?isSpotCheck=true" else ""
             }
         } catch (e: Exception) {
             Log.e("SpotCheckConfig", "Error initializing widget", e)
@@ -481,6 +483,10 @@ class SpotCheckConfig(
         spotChecksMode = ""
         avatarEnabled = false
         avatarUrl =  ""
+        if (isSpotCheckButton) {
+            showSurveyContent = true
+        }
+        isSpotCheckButton = false
         activity?.runOnUiThread {
             originalSoftInputMode?.let {
                 activity?.window?.setSoftInputMode(it)
@@ -546,6 +552,10 @@ class SpotCheckConfig(
             val response =
                 apiService.closeSpotCheck(spotCheckContactID = String.format("%.0f", spotCheckContactID), payload = payload)
             if (response.success == true) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    spotCheckListener?.onCloseButtonTap()
+                }
+
                 Log.i("SPOT-CHECK", "CloseSpotCheck: Success")
             }
         } catch (e: Exception) {
@@ -576,7 +586,12 @@ class SpotCheckConfig(
         avatarEnabled = (appearance["avatar"] as? Map<*, *>)?.get("enabled") as? Boolean ?: false
         avatarUrl = (appearance["avatar"] as? Map<*, *>)?.get("avatarUrl") as? String ?: ""
         spotCheckType = if (chat) "chat" else "classic"
-
+        isSpotCheckButton = (appearance["type"] == "spotcheckButton")
+        spotCheckButtonConfig = if (isSpotCheckButton) (currentSpotCheck?.appearance?.get("buttonConfig") ?: mapOf<String, Any>())
+                as Map<String, Any> else {
+            mapOf<String, Any>()
+        }
+        showSurveyContent = !isSpotCheckButton
         when (appearance["position"]) {
             "top_full" -> position = "top"
             "center_center" -> position = "center"

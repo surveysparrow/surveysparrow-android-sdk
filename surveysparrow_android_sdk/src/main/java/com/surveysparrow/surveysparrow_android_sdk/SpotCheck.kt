@@ -242,6 +242,7 @@ fun SpotCheck(config: SpotCheckConfig) {
                 if ((config.isMounted || config.isFullScreenMode) &&
                     !config.isClassicLoading &&
                     config.isVisible &&
+                    config.showSurveyContent &&
                     config.spotCheckType == "classic"
                 ) {
                     Modifier
@@ -296,7 +297,16 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     .size(32.dp)
                                     .clip(CircleShape)
                                     .background(Color.White)
-                                    .clickable { isButtonClicked=true }
+                                    .clickable {
+
+                                        if(config.isSpotCheckButton){
+                                            config.showSurveyContent = false
+                                        }
+                                        else {
+                                            isButtonClicked = true
+                                        }
+
+                                    }
                                     .shadow(
                                         elevation = 4.dp,
                                         shape = CircleShape,
@@ -341,31 +351,71 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     )
 
 
+
+                                    addJavascriptInterface(object : Any() {
+                                        @JavascriptInterface
+                                        fun onMessageReceive(message: String) {
+
+                                            val gson = Gson()
+                                            val spotCheckData: SpotCheckData =
+                                                gson.fromJson(message, SpotCheckData::class.java)
+                                            if (spotCheckData.type == "spotCheckData") {
+                                                val currentSize =
+                                                    spotCheckData.data?.get("currentQuestionSize") as? Map<String, Any>
+                                                val height =
+                                                    currentSize?.get("height") as Double
+                                                config.currentQuestionHeight = height
+                                            }
+                                            if (spotCheckData.type == "surveyCompleted") {
+                                                CoroutineScope(Dispatchers.IO).launch {
+                                                    config.spotCheckListener?.onSurveyResponse(
+                                                        spotCheckData.data
+                                                    )
+                                                }
+
+                                                config.onClose()
+                                            }
+                                        }
+                                    }, "Android")
+
                                     addJavascriptInterface(object {
                                         @JavascriptInterface
                                         fun postMessage(message: String) {
-                                            val gson = Gson()
-                                            val spotCheckData: SpotCheckData = gson.fromJson(message, SpotCheckData::class.java)
 
-                                            if (spotCheckData.type == "spotCheckData") {
-                                                val data = spotCheckData.data
-
-                                                if(data.currentQuestionSize!=null){
-                                                    config.currentQuestionHeight = spotCheckData.data.currentQuestionSize?.height ?: 0.0
+                                            try {
+                                                val jsonObject = JSONObject(message)
+                                                if (!jsonObject.has("type") || jsonObject.isNull("type") || jsonObject.get(
+                                                        "type"
+                                                    ) !is String
+                                                ) {
+                                                    return
                                                 }
-                                                else if(data.isCloseButtonEnabled == true){
-                                                        config.isCloseButtonEnabled = spotCheckData.data.isCloseButtonEnabled
-                                                            ?:false
+                                                if (!jsonObject.has("data") || jsonObject.isNull("data") || jsonObject.get(
+                                                        "data"
+                                                    ) !is JSONObject
+                                                ) {
+                                                    return
                                                 }
+                                                val gson = Gson()
+                                                val spotCheckData: SpotCheckData =
+                                                    gson.fromJson(message, SpotCheckData::class.java)
+
+                                                if (spotCheckData.type == "thankYouPageSubmission") {
+                                                    config.isCloseButtonEnabled = true
+                                                    CoroutineScope(Dispatchers.IO).launch {
+                                                        config.spotCheckListener?.onSurveyResponse(
+                                                            spotCheckData.data
+                                                        )
+                                                    }
+                                                }
+
+                                                if (spotCheckData.type == "slideInFrame") {
+                                                    config.isMounted = true
+                                                }
+                                            } catch (e: Exception) {
+                                                Log.e("SpotCheck", e.message.toString())
                                             }
 
-
-                                            if (spotCheckData.type == "slideInFrame") {
-                                                config.isMounted = true
-                                            }
-                                            if (spotCheckData.type == "surveyCompleted") {
-                                                config.onClose()
-                                            }
                                         }
                                     }, "flutterSpotCheckData")
 
@@ -398,12 +448,68 @@ fun SpotCheck(config: SpotCheckConfig) {
                                             }
                                         }
 
+                                        @JavascriptInterface
+                                        fun shareData(message: String) {
+                                            val gson = Gson()
+                                            val spotCheckData: Map<String, Any> = gson.fromJson(
+                                                message,
+                                                object : TypeToken<Map<String, Any>>() {}.type
+                                            )
+
+                                            val type = spotCheckData["type"] as? String
+                                            if (type == "surveyLoadStarted") {
+                                                CoroutineScope(Dispatchers.IO).launch {
+                                                    config.spotCheckListener?.onSurveyLoaded(
+                                                        spotCheckData
+                                                    )
+                                                }
+                                            }
+
+                                        }
+
+                                        @JavascriptInterface
+                                        fun sendPartialSubmissionData(message: String) {
+                                            val gson = Gson()
+                                            val spotCheckData: Map<String, Any> = gson.fromJson(
+                                                message,
+                                                object : TypeToken<Map<String, Any>>() {}.type
+                                            )
+
+                                            val type = spotCheckData["type"] as? String
+
+                                            if (type == "partialSubmission") {
+                                                CoroutineScope(Dispatchers.IO).launch {
+                                                    config.spotCheckListener?.onPartialSubmission(
+                                                        spotCheckData
+                                                    )
+                                                }
+                                            }
+
+                                        }
+
                                     }, "SsAndroidSdk")
 
                                     webViewClient = object : WebViewClient() {
                                         override fun onPageFinished(view: WebView?, url: String?) {
                                             super.onPageFinished(view, url)
                                             config.isClassicLoading = false
+                                            view?.evaluateJavascript(
+                                                """
+                                            (function() {
+                                                const styleTag = document.createElement("style");
+                                                styleTag.innerHTML = `
+                                                       .surveysparrow-chat__wrapper .ss-language-selector--wrapper { 
+                                                            margin-right: 45px;                                             
+                                                       }                                      
+                                                       .close-btn-chat--spotchecks {
+                                                            display: none !important;
+                                                       }                                       
+                                                `;
+                                                document.body.appendChild(styleTag);
+                                            })();
+                                            """.trimIndent(),
+                                                null
+                                            )
                                         }
 
                                     }
@@ -481,7 +587,12 @@ fun SpotCheck(config: SpotCheckConfig) {
                         ) {
                             IconButton(
                                 onClick = {
-                                    isButtonClicked = true
+                                    if(config.isSpotCheckButton){
+                                        config.showSurveyContent = false
+                                    }
+                                    else {
+                                        isButtonClicked = true
+                                    }
                                 },
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
@@ -530,7 +641,7 @@ fun SpotCheck(config: SpotCheckConfig) {
 
         if (config.chatUrl.isNotEmpty()) {
 
-        val visibilityModifier = if ((config.isFullScreenMode) &&  config.isVisible && !config.isChatLoading && config.spotCheckType=="chat") Modifier else Modifier.graphicsLayer { alpha = 0f }
+        val visibilityModifier = if ((config.isFullScreenMode) &&  config.isVisible && config.showSurveyContent && !config.isChatLoading && config.spotCheckType=="chat") Modifier else Modifier.graphicsLayer { alpha = 0f }
 
             Box(
             modifier = visibilityModifier.background(Color.Black.copy(alpha = 0.3f))
@@ -570,86 +681,142 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     ViewGroup.LayoutParams.MATCH_PARENT,
                                     ViewGroup.LayoutParams.MATCH_PARENT
                                 )
-                                addJavascriptInterface(object : Any() {
-                                    @JavascriptInterface
-                                    fun onMessageReceive(message: String) {
+                                    addJavascriptInterface(object : Any() {
+                                        @JavascriptInterface
+                                        fun onMessageReceive(message: String) {
 
-                                        val gson = Gson()
-                                        val spotCheckData: SpotCheckData =
-                                            gson.fromJson(message, SpotCheckData::class.java)
-                                        if (spotCheckData.type == "spotCheckData") {
-                                            config.currentQuestionHeight =
-                                                spotCheckData.data?.currentQuestionSize?.height!!
-                                        }
-                                        if (spotCheckData.type == "surveyCompleted") {
-                                            CoroutineScope(Dispatchers.IO).launch {
-                                                config.spotCheckListener?.onSurveyResponse(
-                                                    spotCheckData.data
-                                                )  // ✅ safe call inside coroutine
-                                            }
-
-                                            config.onClose()
-                                        }
-                                    }
-                                }, "Android")
-
-                                addJavascriptInterface(object {
-                                    @JavascriptInterface
-                                    fun postMessage(message: String) {
-
-                                        try {
-                                            val jsonObject = JSONObject(message)
-                                            if (!jsonObject.has("type") || jsonObject.isNull("type") || jsonObject.get(
-                                                    "type"
-                                                ) !is String
-                                            ) {
-                                                return
-                                            }
-                                            if (!jsonObject.has("data") || jsonObject.isNull("data") || jsonObject.get(
-                                                    "data"
-                                                ) !is JSONObject
-                                            ) {
-                                                return
-                                            }
                                             val gson = Gson()
                                             val spotCheckData: SpotCheckData =
                                                 gson.fromJson(message, SpotCheckData::class.java)
-
-                                            if (spotCheckData.type == "thankYouPageSubmission") {
-                                                config.isCloseButtonEnabled = true
+                                            if (spotCheckData.type == "spotCheckData") {
+                                                val currentSize =
+                                                    spotCheckData.data?.get("currentQuestionSize") as? Map<String, Any>
+                                                val height =
+                                                    currentSize?.get("height") as Double
+                                                config.currentQuestionHeight = height
+                                            }
+                                            if (spotCheckData.type == "surveyCompleted") {
                                                 CoroutineScope(Dispatchers.IO).launch {
                                                     config.spotCheckListener?.onSurveyResponse(
                                                         spotCheckData.data
                                                     )
                                                 }
+
+                                                config.onClose()
                                             }
-                                        } catch (e: Exception) {
-                                            Log.e("SpotCheck", e.message.toString())
                                         }
+                                    }, "Android")
 
-                                    }
-                                }, "flutterSpotCheckData")
+                                    addJavascriptInterface(object {
+                                        @JavascriptInterface
+                                        fun postMessage(message: String) {
 
-
-                                addJavascriptInterface(object : Any() {
-                                    @JavascriptInterface
-                                    fun captureImage() {
-                                        if (!isCaptureImageActive) {
-                                            isCaptureImageActive = true
                                             try {
-                                                if (context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                                                    val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-                                                    imageCaptureLauncher.launch(intent)
-                                                } else {
-                                                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                                                val jsonObject = JSONObject(message)
+                                                if (!jsonObject.has("type") || jsonObject.isNull("type") || jsonObject.get(
+                                                        "type"
+                                                    ) !is String
+                                                ) {
+                                                    return
                                                 }
-                                            } catch (e: IOException) {
-                                                Log.d("Photo Capture", "Error in photo Capture")
-                                                isCaptureImageActive = false
+                                                if (!jsonObject.has("data") || jsonObject.isNull("data") || jsonObject.get(
+                                                        "data"
+                                                    ) !is JSONObject
+                                                ) {
+                                                    return
+                                                }
+                                                val gson = Gson()
+                                                val spotCheckData: SpotCheckData =
+                                                    gson.fromJson(message, SpotCheckData::class.java)
+
+                                                if (spotCheckData.type == "thankYouPageSubmission") {
+                                                    config.isCloseButtonEnabled = true
+                                                    CoroutineScope(Dispatchers.IO).launch {
+                                                        config.spotCheckListener?.onSurveyResponse(
+                                                            spotCheckData.data
+                                                        )
+                                                    }
+                                                }
+
+                                                if (spotCheckData.type == "slideInFrame") {
+                                                    config.isMounted = true
+                                                }
+                                            } catch (e: Exception) {
+                                                Log.e("SpotCheck", e.message.toString())
+                                            }
+
+                                        }
+                                    }, "flutterSpotCheckData")
+
+
+                                    addJavascriptInterface(object : Any() {
+                                        @JavascriptInterface
+                                        fun captureImage() {
+                                            if (!isCaptureImageActive) {
+
+                                                isCaptureImageActive = true
+
+                                                try {
+
+                                                    if (context.checkSelfPermission(Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+
+                                                        val intent =
+                                                            Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+
+
+                                                        imageCaptureLauncher.launch(intent)
+
+                                                    } else {
+                                                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                                                    }
+
+                                                } catch (e: IOException) {
+                                                    Log.d("Photo Capture", "Error in photo Capture")
+                                                    isCaptureImageActive = false
+                                                }
                                             }
                                         }
-                                    }
-                                }, "SsAndroidSdk")
+
+                                        @JavascriptInterface
+                                        fun shareData(message: String) {
+                                            val gson = Gson()
+                                            val spotCheckData: Map<String, Any> = gson.fromJson(
+                                                message,
+                                                object : TypeToken<Map<String, Any>>() {}.type
+                                            )
+
+                                            val type = spotCheckData["type"] as? String
+                                            if (type == "surveyLoadStarted") {
+                                                CoroutineScope(Dispatchers.IO).launch {
+                                                    config.spotCheckListener?.onSurveyLoaded(
+                                                        spotCheckData
+                                                    )
+                                                }
+                                            }
+
+                                        }
+
+                                        @JavascriptInterface
+                                        fun sendPartialSubmissionData(message: String) {
+                                            val gson = Gson()
+                                            val spotCheckData: Map<String, Any> = gson.fromJson(
+                                                message,
+                                                object : TypeToken<Map<String, Any>>() {}.type
+                                            )
+
+                                            val type = spotCheckData["type"] as? String
+
+                                            if (type == "partialSubmission") {
+                                                CoroutineScope(Dispatchers.IO).launch {
+                                                    config.spotCheckListener?.onPartialSubmission(
+                                                        spotCheckData
+                                                    )
+                                                }
+                                            }
+
+                                        }
+
+                                    }, "SsAndroidSdk")
 
                                 webViewClient = object : WebViewClient() {
                                     override fun onPageFinished(view: WebView?, url: String?) {
@@ -745,7 +912,12 @@ fun SpotCheck(config: SpotCheckConfig) {
                     if ((config.currentQuestionHeight != 0.0 || config.isFullScreenMode) && config.isCloseButtonEnabled) {
                         IconButton(
                             onClick = {
-                                isButtonClicked = true
+                                if(config.isSpotCheckButton){
+                                    config.showSurveyContent = false
+                                }
+                                else {
+                                    isButtonClicked = true
+                                }
 
                             },
                             modifier = Modifier
@@ -764,6 +936,29 @@ fun SpotCheck(config: SpotCheckConfig) {
             }
         }
     }
+
+
+    if (config.isSpotCheckButton && !config.showSurveyContent) {
+        val buttonConfigMap = config.spotCheckButtonConfig
+        if (buttonConfigMap.isNotEmpty()) {
+            val buttonConfig = SpotCheckButtonConfig(
+                type = buttonConfigMap["type"] as? String ?: "floatingButton",
+                position = buttonConfigMap["position"] as? String ?: "bottom_right",
+                buttonSize = buttonConfigMap["buttonSize"] as? String ?: "medium",
+                backgroundColor = buttonConfigMap["backgroundColor"] as? String ?: "#4A9CA6",
+                textColor = buttonConfigMap["textColor"] as? String ?: "#FFFFFF",
+                buttonText = buttonConfigMap["buttonText"] as? String ?: "",
+                icon = buttonConfigMap["icon"] as? String ?: "",
+                generatedIcon = buttonConfigMap["generatedIcon"] as? String ?: "",
+                cornerRadius = buttonConfigMap["cornerRadius"] as? String ?: "sharp",
+                onPress = {
+                    config.showSurveyContent = true
+                }
+            )
+            SpotCheckButton(config = buttonConfig)
+        }
+    }
+
 
 
 }

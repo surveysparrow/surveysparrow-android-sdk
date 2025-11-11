@@ -123,7 +123,7 @@ class SpotCheckConfig(
                 classicUrl = if (classicIframe) "https://$domainName/eui-template/classic?isSpotCheck=true" else ""
             }
         } catch (e: Exception) {
-            Log.e("SpotCheckConfig", "Error initializing widget"+e, e)
+            Log.e("SpotCheckConfig", "Error initializing widget", e)
         }
     }
 

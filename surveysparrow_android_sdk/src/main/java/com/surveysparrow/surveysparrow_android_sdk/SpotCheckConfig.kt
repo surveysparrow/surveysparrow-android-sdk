@@ -71,6 +71,7 @@ class SpotCheckConfig(
     var isSpotCheckButton by  mutableStateOf(false)
     var spotCheckButtonConfig by mutableStateOf<Map<String, Any>>(mapOf())
     var showSurveyContent by mutableStateOf(true)
+    var isThankyouPageSubmission by mutableStateOf(false)
 
     init {
         if (traceId.isEmpty()) {
@@ -122,7 +123,7 @@ class SpotCheckConfig(
                 classicUrl = if (classicIframe) "https://$domainName/eui-template/classic?isSpotCheck=true" else ""
             }
         } catch (e: Exception) {
-            Log.e("SpotCheckConfig", "Error initializing widget", e)
+            Log.e("SpotCheckConfig", "Error initializing widget"+e, e)
         }
     }
 
@@ -487,6 +488,7 @@ class SpotCheckConfig(
             showSurveyContent = true
         }
         isSpotCheckButton = false
+        isThankyouPageSubmission = false
         activity?.runOnUiThread {
             originalSoftInputMode?.let {
                 activity?.window?.setSoftInputMode(it)

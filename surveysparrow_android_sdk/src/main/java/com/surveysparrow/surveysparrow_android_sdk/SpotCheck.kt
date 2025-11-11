@@ -74,6 +74,7 @@ import android.annotation.SuppressLint
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -300,7 +301,12 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     .clickable {
 
                                         if(config.isSpotCheckButton){
-                                            config.showSurveyContent = false
+                                            if(config.isThankyouPageSubmission){
+                                                isButtonClicked = true
+                                            }
+                                            else {
+                                                config.showSurveyContent = false
+                                            }
                                         }
                                         else {
                                             isButtonClicked = true
@@ -402,11 +408,20 @@ fun SpotCheck(config: SpotCheckConfig) {
 
                                                 if (spotCheckData.type == "thankYouPageSubmission") {
                                                     config.isCloseButtonEnabled = true
+                                                    config.isThankyouPageSubmission = true
                                                     CoroutineScope(Dispatchers.IO).launch {
                                                         config.spotCheckListener?.onSurveyResponse(
                                                             spotCheckData.data
                                                         )
                                                     }
+
+                                                    if (config.spotChecksMode == "miniCard") {
+                                                        CoroutineScope(Dispatchers.Main).launch {
+                                                            delay(4000)
+                                                            config.onClose()
+                                                        }
+                                                    }
+
                                                 }
 
                                                 if (spotCheckData.type == "slideInFrame") {
@@ -588,7 +603,12 @@ fun SpotCheck(config: SpotCheckConfig) {
                             IconButton(
                                 onClick = {
                                     if(config.isSpotCheckButton){
-                                        config.showSurveyContent = false
+                                        if(config.isThankyouPageSubmission){
+                                            isButtonClicked = true
+                                        }
+                                        else {
+                                            config.showSurveyContent = false
+                                        }
                                     }
                                     else {
                                         isButtonClicked = true
@@ -731,10 +751,18 @@ fun SpotCheck(config: SpotCheckConfig) {
 
                                                 if (spotCheckData.type == "thankYouPageSubmission") {
                                                     config.isCloseButtonEnabled = true
+                                                    config.isThankyouPageSubmission = true
                                                     CoroutineScope(Dispatchers.IO).launch {
                                                         config.spotCheckListener?.onSurveyResponse(
                                                             spotCheckData.data
                                                         )
+                                                    }
+
+                                                    if (config.spotChecksMode == "miniCard") {
+                                                        CoroutineScope(Dispatchers.Main).launch {
+                                                            delay(4000)
+                                                            config.onClose()
+                                                        }
                                                     }
                                                 }
 
@@ -913,7 +941,12 @@ fun SpotCheck(config: SpotCheckConfig) {
                         IconButton(
                             onClick = {
                                 if(config.isSpotCheckButton){
-                                    config.showSurveyContent = false
+                                    if(config.isThankyouPageSubmission){
+                                        isButtonClicked = true
+                                    }
+                                    else {
+                                        config.showSurveyContent = false
+                                    }
                                 }
                                 else {
                                     isButtonClicked = true
@@ -974,6 +1007,11 @@ suspend fun trackScreen(screen: String, config: SpotCheckConfig) {
     } else {
         Log.i("TrackScreen", "Failed")
     }
+}
+
+suspend fun closeSpotchecks(config: SpotCheckConfig){
+    config.closeSpotCheck()
+    config.onClose()
 }
 
 suspend fun trackEvent(screen: String, event: Map<String, Any>, config: SpotCheckConfig) {

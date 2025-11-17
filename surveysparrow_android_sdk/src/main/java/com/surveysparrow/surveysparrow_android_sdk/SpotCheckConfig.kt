@@ -24,6 +24,8 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 
 class SpotCheckConfig(
     var domainName: String,
@@ -72,6 +74,10 @@ class SpotCheckConfig(
     var spotCheckButtonConfig by mutableStateOf<Map<String, Any>>(mapOf())
     var showSurveyContent by mutableStateOf(true)
     var isThankyouPageSubmission by mutableStateOf(false)
+    var appearance by mutableStateOf<Map<String, Any>>(mapOf())
+    var isChat by mutableStateOf(false)
+    var screenName by mutableStateOf("")
+
 
     init {
         if (traceId.isEmpty()) {
@@ -450,7 +456,7 @@ class SpotCheckConfig(
         }
     }
 
-    fun onClose() {
+    fun onClose(isNavigation: Boolean = false) {
         val targetWebView = if (spotCheckType == "chat") chatWebViewRef else classicWebViewRef
 
         val jsToInject = """
@@ -471,24 +477,36 @@ class SpotCheckConfig(
             }
         }
 
-        isVisible = false
-        isFullScreenMode = false
-        spotCheckID = 0.0;
-        position = "bottom"
-        currentQuestionHeight = 0.0
-        isCloseButtonEnabled = false
-        spotCheckContactID = 0.0
-        spotCheckURL = ""
-        isMounted = false
-        isInjected = false
-        spotChecksMode = ""
-        avatarEnabled = false
-        avatarUrl =  ""
-        if (isSpotCheckButton) {
-            showSurveyContent = true
+        if(!isSpotCheckButton || isNavigation) {
+            isVisible = false
+            isFullScreenMode = false
+            spotCheckID = 0.0;
+            position = "bottom"
+            currentQuestionHeight = 0.0
+            isCloseButtonEnabled = false
+            spotCheckContactID = 0.0
+            spotCheckURL = ""
+            isMounted = false
+            isInjected = false
+            spotChecksMode = ""
+            avatarEnabled = false
+            avatarUrl = ""
+            if (isSpotCheckButton) {
+                showSurveyContent = true
+            }
+            isSpotCheckButton = false
+            isThankyouPageSubmission = false
         }
-        isSpotCheckButton = false
-        isThankyouPageSubmission = false
+        else{
+            isVisible = false
+            showSurveyContent = false
+            isMounted = false
+            isThankyouPageSubmission = false
+            isInjected = false
+            currentQuestionHeight = 0.0
+        }
+
+
         activity?.runOnUiThread {
             originalSoftInputMode?.let {
                 activity?.window?.setSoftInputMode(it)
@@ -576,120 +594,116 @@ class SpotCheckConfig(
             id == spotCheckID.toInt()
         }
 
-
-
-        val chat = ((currentSpotCheck?.survey)?.get("surveyType") as? String)?.let {
-            isChatSurvey(
-                it
-            )
+        val isChat = ((currentSpotCheck?.survey)?.get("surveyType") as? String)?.let {
+            isChatSurvey(it)
         } == true && appearance["mode"] == "fullScreen"
 
         spotChecksMode = (appearance["mode"] as? String).toString()
         avatarEnabled = (appearance["avatar"] as? Map<*, *>)?.get("enabled") as? Boolean ?: false
         avatarUrl = (appearance["avatar"] as? Map<*, *>)?.get("avatarUrl") as? String ?: ""
-        spotCheckType = if (chat) "chat" else "classic"
-        isSpotCheckButton = (appearance["type"] == "spotcheckButton")
-        spotCheckButtonConfig = if (isSpotCheckButton) (currentSpotCheck?.appearance?.get("buttonConfig") ?: mapOf<String, Any>())
-                as Map<String, Any> else {
-            mapOf<String, Any>()
-        }
+        spotCheckType = if (isChat) "chat" else "classic"
+        val isSpotCheckButton = (appearance["type"] == "spotcheckButton")
+        spotCheckButtonConfig = if (isSpotCheckButton)
+            (currentSpotCheck?.appearance?.get("buttonConfig") ?: mapOf<String, Any>()) as Map<String, Any>
+        else mapOf()
         showSurveyContent = !isSpotCheckButton
+
         when (appearance["position"]) {
             "top_full" -> position = "top"
             "center_center" -> position = "center"
             "bottom_full" -> position = "bottom"
         }
 
-
         isCloseButtonEnabled = appearance["closeButton"] as? Boolean ?: false
         closeButtonStyle = (appearance["colors"] as? Map<*, *>)?.get("overrides") as? Map<String, String> ?: emptyMap()
-
         (appearance["cardProperties"] as? Map<*, *>)?.get("maxHeight")?.let {
             maxHeight = it.toString().toDoubleOrNull()?.div(100) ?: 1.0
         }
 
         isFullScreenMode = appearance["mode"] == "fullScreen"
-
         isBannerImageOn = (appearance["bannerImage"] as? Map<*, *>)?.get("enabled") as? Boolean ?: false
 
-        val sb = StringBuilder("https://$domainName/n/spotcheck/$triggerToken/${if (chat) "config" else "bootstrap"}")
+        val sb = StringBuilder("https://$domainName/n/spotcheck/$triggerToken/${if (isChat) "config" else "bootstrap"}")
         sb.append("?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}")
         sb.append("&traceId=$traceId")
         sb.append("&spotcheckUrl=$screen")
-
         variables.forEach { (key, value) -> sb.append("&$key=$value") }
-        val fullUrl = sb.toString()
-        spotCheckURL = fullUrl
-        CoroutineScope(Dispatchers.IO).launch {
+        spotCheckURL = sb.toString()
 
-            try {
-                val apiService = RetrofitClient.create("https://$domainName")
-                val userAgent = getUserAgent()
-                Log.d("useragent", userAgent)
-                val response = apiService.contentApi(spotCheckURL, userAgent)
+        this.appearance = appearance
+        this.isChat = isChat
+        this.screenName = screen
 
+        val delayMillis = (afterDelay * 1000).toLong()
+        Handler(Looper.getMainLooper()).postDelayed({
+            this.isSpotCheckButton = isSpotCheckButton
+            if(!this.isSpotCheckButton){
+                CoroutineScope(Dispatchers.IO).launch {
+                    performSpotCheckApi()
+                }
+            }
+        }, delayMillis)
+    }
 
-                val responseBodyString = response.body()?.string()
-                val gson = Gson()
-                val dataType = object : TypeToken<Map<String, Any?>>() {}.type
-                val data: Map<String, Any?> = gson.fromJson(responseBodyString, dataType)
+    suspend fun performSpotCheckApi() {
+        try {
+            val apiService = RetrofitClient.create("https://$domainName")
+            val userAgent = getUserAgent()
+            val response = apiService.contentApi(spotCheckURL, userAgent)
+            val responseBodyString = response.body()?.string() ?: return
 
+            val gson = Gson()
+            val dataType = object : TypeToken<Map<String, Any?>>() {}.type
+            val data: Map<String, Any?> = gson.fromJson(responseBodyString, dataType)
 
+            val config = data["config"] as? Map<*, *>
+            val themeInfo = config?.get("generatedCSS")
 
-                val config = data["config"] as? Map<*, *>
-                    val themeInfo = config?.get("generatedCSS")
+            val themePayload = mapOf(
+                "type" to "THEME_UPDATE_SPOTCHECK",
+                "themeInfo" to themeInfo
+            )
 
-                    val themePayload = mapOf(
-                        "type" to "THEME_UPDATE_SPOTCHECK",
-                        "themeInfo" to themeInfo
-                    )
+            val payload = mapOf(
+                "type" to "RESET_STATE",
+                "state" to mapOf<String, Any?>(
+                    *(data.map { it.key to it.value }.toTypedArray()),
+                    "skip" to true,
+                    "spotCheckAppearance" to appearance + ("targetType" to "MOBILE"),
+                    "spotcheckUrl" to screenName,
+                    "traceId" to traceId,
+                    "elementBuilderParams" to (variables ?: emptyMap())
+                ) as Map<String, Map<String, Any>>
+            )
 
-                    val payload = mapOf(
-                        "type" to "RESET_STATE",
-                        "state" to mapOf<String, Any?>(
-                            *(data.map { it.key to it.value }.toTypedArray()),
-                            "skip" to true,
-                            "spotCheckAppearance" to appearance + ("targetType" to "MOBILE"),
-                            "spotcheckUrl" to screen,
-                            "traceId" to traceId,
-                            "elementBuilderParams" to (variables ?: emptyMap())
-                        ) as Map<String, Map<String, Any>>
-                    )
+            val js = """
+            (function() {
+                window.dispatchEvent(new MessageEvent('message', { data: ${gson.toJson(payload)} }));
+                window.dispatchEvent(new MessageEvent('message', { data: ${gson.toJson(themePayload)} }));
+            })();
+        """.trimIndent()
 
+            withContext(Dispatchers.Main) {
+                val webView = if (isChat) chatWebViewRef else classicWebViewRef
+                val isLoading = if (isChat) isChatLoading else isClassicLoading
 
-
-
-                    val js = """
-                    (function() {
-                        window.dispatchEvent(new MessageEvent('message', { data: ${gson.toJson(payload)} }));
-                        window.dispatchEvent(new MessageEvent('message', { data: ${gson.toJson(themePayload)} }));
-                    })();
-                """.trimIndent()
-
-
-
-                    withContext(Dispatchers.Main) {
-                        val webView = if (chat) chatWebViewRef else classicWebViewRef
-                        val isLoading = if (chat) isChatLoading else isClassicLoading
-
-                        if (!isLoading) {
+                if (!isLoading) {
+                    webView?.evaluateJavascript(js, null)
+                    isInjected = true
+                } else {
+                    snapshotFlow { isClassicLoading }
+                        .filter { !it }
+                        .first()
+                        .let {
                             webView?.evaluateJavascript(js, null)
                             isInjected = true
-                        } else {
-                            snapshotFlow { isClassicLoading }
-                                .filter { !it }
-                                .first()
-                                .let {
-                                    webView?.evaluateJavascript(js, null)
-                                    isInjected = true
-                                }
-
                         }
-                    }
-
-            } catch (e: Exception) {
-                Log.e("SpotCheck", "Exception: ${e.message}", e)
+                }
             }
+        } catch (e: Exception) {
+            Log.e("SpotCheck", "Exception: ${e.message}", e)
         }
     }
+
+
 }

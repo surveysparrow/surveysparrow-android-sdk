@@ -89,8 +89,6 @@ fun SpotCheck(config: SpotCheckConfig) {
 
     val configuration = LocalConfiguration.current
     val isTablet = configuration.screenWidthDp > 560
-    var isButtonClicked by remember { mutableStateOf(false) }
-
 
     var colorValue = "#000000"
     if (config.closeButtonStyle["ctaButton"]?.let { isHexColor(it) } == true) {
@@ -228,14 +226,6 @@ fun SpotCheck(config: SpotCheckConfig) {
             }
         }
 
-
-    if (isButtonClicked) {
-        LaunchedEffect(true) {
-            config.closeSpotCheck()
-            config.onClose()
-        }
-    }
-
     if (config.classicUrl.isNotEmpty()) {
 
         val visibilityModifier = Modifier
@@ -299,19 +289,10 @@ fun SpotCheck(config: SpotCheckConfig) {
                                     .clip(CircleShape)
                                     .background(Color.White)
                                     .clickable {
-
-                                        if(config.isSpotCheckButton){
-                                            if(config.isThankyouPageSubmission){
-                                                isButtonClicked = true
-                                            }
-                                            else {
-                                                config.showSurveyContent = false
-                                            }
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            config.closeSpotCheck()
+                                            config.onClose()
                                         }
-                                        else {
-                                            isButtonClicked = true
-                                        }
-
                                     }
                                     .shadow(
                                         elevation = 4.dp,
@@ -602,16 +583,9 @@ fun SpotCheck(config: SpotCheckConfig) {
                         ) {
                             IconButton(
                                 onClick = {
-                                    if(config.isSpotCheckButton){
-                                        if(config.isThankyouPageSubmission){
-                                            isButtonClicked = true
-                                        }
-                                        else {
-                                            config.showSurveyContent = false
-                                        }
-                                    }
-                                    else {
-                                        isButtonClicked = true
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        config.closeSpotCheck()
+                                        config.onClose()
                                     }
                                 },
                                 modifier = Modifier
@@ -940,18 +914,10 @@ fun SpotCheck(config: SpotCheckConfig) {
                     if ((config.currentQuestionHeight != 0.0 || config.isFullScreenMode) && config.isCloseButtonEnabled) {
                         IconButton(
                             onClick = {
-                                if(config.isSpotCheckButton){
-                                    if(config.isThankyouPageSubmission){
-                                        isButtonClicked = true
-                                    }
-                                    else {
-                                        config.showSurveyContent = false
-                                    }
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    config.closeSpotCheck()
+                                    config.onClose()
                                 }
-                                else {
-                                    isButtonClicked = true
-                                }
-
                             },
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
@@ -985,7 +951,11 @@ fun SpotCheck(config: SpotCheckConfig) {
                 generatedIcon = buttonConfigMap["generatedIcon"] as? String ?: "",
                 cornerRadius = buttonConfigMap["cornerRadius"] as? String ?: "sharp",
                 onPress = {
-                    config.showSurveyContent = true
+                    CoroutineScope(Dispatchers.IO).launch {
+                        config.performSpotCheckApi()
+                        config.showSurveyContent = true
+                        config.openSpot()
+                    }
                 }
             )
             SpotCheckButton(config = buttonConfig)
@@ -999,11 +969,8 @@ fun SpotCheck(config: SpotCheckConfig) {
 suspend fun trackScreen(screen: String, config: SpotCheckConfig) {
     val response = config.sendRequestForTrackScreen(screen)
     if (response) {
-        val delayMillis = (config.afterDelay * 1000).toLong()
-        Handler(Looper.getMainLooper()).postDelayed({
             config.openSpot()
             Log.i("TrackScreen", config.isVisible.toString())
-        }, delayMillis)
     } else {
         Log.i("TrackScreen", "Failed")
     }
@@ -1011,17 +978,14 @@ suspend fun trackScreen(screen: String, config: SpotCheckConfig) {
 
 suspend fun closeSpotchecks(config: SpotCheckConfig){
     config.closeSpotCheck()
-    config.onClose()
+    config.onClose(true)
 }
 
 suspend fun trackEvent(screen: String, event: Map<String, Any>, config: SpotCheckConfig) {
     val response = config.sendEventTriggerRequest(screen, event)
     if (response) {
-        val delayMillis = (config.afterDelay * 1000).toLong()
-        Handler(Looper.getMainLooper()).postDelayed({
             config.openSpot()
             Log.i("TrackEvent", config.isVisible.toString())
-        }, delayMillis)
     } else {
         Log.i("TrackScreen", "Failed")
     }

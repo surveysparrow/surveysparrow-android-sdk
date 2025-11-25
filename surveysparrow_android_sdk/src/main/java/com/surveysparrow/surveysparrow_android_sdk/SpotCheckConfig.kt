@@ -26,6 +26,7 @@ import java.util.TimeZone
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import kotlinx.coroutines.delay
 
 class SpotCheckConfig(
     var domainName: String,
@@ -64,7 +65,7 @@ class SpotCheckConfig(
     var avatarEnabled: Boolean by mutableStateOf(false)
     var isClassicLoading by  mutableStateOf(true)
     var isChatLoading by  mutableStateOf(true)
-    var isInjected by  mutableStateOf(true)
+    var isInjected by  mutableStateOf(false)
     var isMounted by mutableStateOf(false)
     var classicWebViewRef by  mutableStateOf<WebView?>(null)
     var chatWebViewRef by  mutableStateOf<WebView?>(null)
@@ -654,7 +655,18 @@ class SpotCheckConfig(
 
             val gson = Gson()
             val dataType = object : TypeToken<Map<String, Any?>>() {}.type
-            val data: Map<String, Any?> = gson.fromJson(responseBodyString, dataType)
+
+            val data: Map<String, Any?> =
+                try {
+                    if (responseBodyString.trim().startsWith("{")) {
+                        gson.fromJson(responseBodyString, dataType)
+                    } else {
+                        emptyMap()
+                    }
+                } catch (_: Exception) {
+                    emptyMap()
+                }
+
 
             val config = data["config"] as? Map<*, *>
             val themeInfo = config?.get("generatedCSS")
@@ -688,16 +700,31 @@ class SpotCheckConfig(
                 val isLoading = if (isChat) isChatLoading else isClassicLoading
 
                 if (!isLoading) {
+                    if(isChat) {
+                        delay(1200)
+                    }
                     webView?.evaluateJavascript(js, null)
                     isInjected = true
                 } else {
-                    snapshotFlow { isClassicLoading }
-                        .filter { !it }
-                        .first()
-                        .let {
-                            webView?.evaluateJavascript(js, null)
-                            isInjected = true
-                        }
+                    if(isChat) {
+                        snapshotFlow { isChatLoading }
+                            .filter { !it }
+                            .first()
+                            .let {
+                                delay(1200)
+                                webView?.evaluateJavascript(js, null)
+                                isInjected = true
+                            }
+                    }
+                    else{
+                        snapshotFlow { isClassicLoading }
+                            .filter { !it }
+                            .first()
+                            .let {
+                                webView?.evaluateJavascript(js, null)
+                                isInjected = true
+                            }
+                    }
                 }
             }
         } catch (e: Exception) {

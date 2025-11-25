@@ -18,6 +18,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -71,6 +72,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import android.annotation.SuppressLint
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.compose.runtime.DisposableEffect
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,17 +81,259 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
+private object JsBridgeNames {
+    const val ANDROID = "Android"
+    const val FLUTTER = "flutterSpotCheckData"
+    const val NATIVE = "SsAndroidSdk"
+}
+
+private object SpotCheckEvents {
+    const val SLIDE_IN_FRAME = "slideInFrame"
+    const val THANK_YOU_PAGE_SUBMISSION = "thankYouPageSubmission"
+    const val SURVEY_COMPLETED = "surveyCompleted"
+    const val SPOTCHECK_DATA = "spotCheckData"
+    const val SURVEY_LOAD_STARTED = "surveyLoadStarted"
+    const val PARTIAL_SUBMISSION = "partialSubmission"
+}
+
+private const val THANK_YOU_PAGE_DELAY = 4000L
+private const val TABLET_SCREEN_WIDTH_DP = 560
+
+private class SpotCheckState {
+    var isCaptureImageActive by mutableStateOf(false)
+    var capturedImageUri by mutableStateOf<Uri?>(null)
+    var mUploadMessage: ValueCallback<Uri?>? by mutableStateOf(null)
+    var mUploadMessageArray: ValueCallback<Array<Uri?>?>? by mutableStateOf(null)
+    var audioPermissionGranted by mutableStateOf(false)
+}
+
+private class SpotCheckEventHandler(private val config: SpotCheckConfig) {
+    private val gson = Gson()
+
+    fun handleAndroidMessage(message: String) {
+        val spotCheckData: SpotCheckData =
+            gson.fromJson(message, SpotCheckData::class.java)
+        if (spotCheckData.type == SpotCheckEvents.SPOTCHECK_DATA) {
+            val currentSize =
+                spotCheckData.data?.get("currentQuestionSize") as? Map<String, Any>
+            val height =
+                currentSize?.get("height") as Double
+            config.currentQuestionHeight = height
+        }
+        if (spotCheckData.type == SpotCheckEvents.SURVEY_COMPLETED) {
+            CoroutineScope(Dispatchers.IO).launch {
+                config.spotCheckListener?.onSurveyResponse(
+                    spotCheckData.data
+                )
+            }
+            config.onClose()
+        }
+    }
+
+    fun handleFlutterSpotCheckData(message: String) {
+        try {
+            val jsonObject = JSONObject(message)
+            if (!jsonObject.has("type") || jsonObject.isNull("type") || jsonObject.get("type") !is String) {
+                return
+            }
+            if (!jsonObject.has("data") || jsonObject.isNull("data") || jsonObject.get("data") !is JSONObject) {
+                return
+            }
+            val spotCheckData: SpotCheckData =
+                gson.fromJson(message, SpotCheckData::class.java)
+
+            if (spotCheckData.type == SpotCheckEvents.THANK_YOU_PAGE_SUBMISSION) {
+                config.isCloseButtonEnabled = true
+                config.isThankyouPageSubmission = true
+                CoroutineScope(Dispatchers.IO).launch {
+                    config.spotCheckListener?.onSurveyResponse(
+                        spotCheckData.data
+                    )
+                }
+
+                if (config.spotChecksMode == "miniCard") {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        delay(THANK_YOU_PAGE_DELAY)
+                        config.onClose()
+                    }
+                }
+            }
+            if (spotCheckData.type == SpotCheckEvents.SLIDE_IN_FRAME) {
+                config.isMounted = true
+            }
+        } catch (e: Exception) {
+            Log.e("SpotCheck", e.message.toString())
+        }
+    }
+
+    fun handleShareData(message: String) {
+        val spotCheckData: Map<String, Any> = gson.fromJson(
+            message,
+            object : TypeToken<Map<String, Any>>() {}.type
+        )
+        val type = spotCheckData["type"] as? String
+        if (type == SpotCheckEvents.SURVEY_LOAD_STARTED) {
+            CoroutineScope(Dispatchers.IO).launch {
+                config.spotCheckListener?.onSurveyLoaded(
+                    spotCheckData
+                )
+            }
+        }
+    }
+
+    fun handlePartialSubmission(message: String) {
+        val spotCheckData: Map<String, Any> = gson.fromJson(
+            message,
+            object : TypeToken<Map<String, Any>>() {}.type
+        )
+        val type = spotCheckData["type"] as? String
+        if (type == SpotCheckEvents.PARTIAL_SUBMISSION) {
+            CoroutineScope(Dispatchers.IO).launch {
+                config.spotCheckListener?.onPartialSubmission(
+                    spotCheckData
+                )
+            }
+        }
+    }
+}
+
+@SuppressLint("JavascriptInterface")
+private fun createAndroidJsInterface(eventHandler: SpotCheckEventHandler) = object : Any() {
+    @JavascriptInterface
+    fun onMessageReceive(message: String) {
+        eventHandler.handleAndroidMessage(message)
+    }
+}
+
+@SuppressLint("JavascriptInterface")
+private fun createFlutterJsInterface(eventHandler: SpotCheckEventHandler) = object {
+    @JavascriptInterface
+    fun postMessage(message: String) {
+        eventHandler.handleFlutterSpotCheckData(message)
+    }
+}
+
+@SuppressLint("JavascriptInterface")
+private fun createSsAndroidSdkJsInterface(
+    eventHandler: SpotCheckEventHandler,
+    launchCamera: () -> Unit
+) = object : Any() {
+    @JavascriptInterface
+    fun captureImage() {
+        launchCamera()
+    }
+
+    @JavascriptInterface
+    fun shareData(message: String) {
+        eventHandler.handleShareData(message)
+    }
+
+    @JavascriptInterface
+    fun sendPartialSubmissionData(message: String) {
+        eventHandler.handlePartialSubmission(message)
+    }
+}
+
+private fun shouldShowClassic(config: SpotCheckConfig): Boolean {
+    return (config.isMounted || config.isFullScreenMode) &&
+            !config.isClassicLoading &&
+            config.isVisible &&
+            config.showSurveyContent &&
+            config.isInjected &&
+            config.spotCheckType == "classic"
+}
+
+private fun shouldShowChat(config: SpotCheckConfig): Boolean {
+    return config.isFullScreenMode &&
+            config.isVisible &&
+            config.showSurveyContent &&
+            !config.isChatLoading &&
+            config.isInjected &&
+            config.spotCheckType == "chat"
+}
+
+@Composable
+private fun rememberLaunchers(
+    state: SpotCheckState,
+    onImageCaptured: (Uri?) -> Unit,
+    onFileChosen: (Array<Uri?>?) -> Unit
+): Triple<ManagedActivityResultLauncher<Intent, ActivityResult>, ManagedActivityResultLauncher<String, Boolean>, ManagedActivityResultLauncher<Intent, ActivityResult>> {
+    val context = LocalContext.current
+
+    val fileChooserLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (state.mUploadMessageArray == null && state.mUploadMessage == null) {
+            return@rememberLauncherForActivityResult
+        }
+
+        val resultCode = result.resultCode
+        val data = result.data
+
+        if (resultCode == Activity.RESULT_OK) {
+            onFileChosen(WebChromeClient.FileChooserParams.parseResult(resultCode, data))
+        } else {
+            onFileChosen(null)
+        }
+    }
+
+    val imageCaptureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        var capturedImageUri: Uri? = null
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data: Intent? = result.data
+            val extras: Bundle? = data?.extras
+            val imageBitmap: Bitmap? = extras?.get("data") as? Bitmap
+            val filename = "image_${System.currentTimeMillis()}.png"
+            val file = File(context.filesDir, filename)
+            capturedImageUri = Uri.fromFile(file)
+            if (imageBitmap != null) {
+                try {
+                    FileOutputStream(file).use { out ->
+                        imageBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    }
+                    onImageCaptured(capturedImageUri)
+                } catch (e: IOException) {
+                    Log.d("Photo Capture", "Error in photo Capture")
+                    onImageCaptured(null)
+                }
+            } else {
+                onImageCaptured(null)
+            }
+        } else {
+            onImageCaptured(null)
+        }
+        state.isCaptureImageActive = false
+    }
+
+    val permissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            try {
+                if (isGranted) {
+                    val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                    imageCaptureLauncher.launch(intent)
+                } else {
+                    Log.d("Photo Capture", "Camera permission denied")
+                    state.isCaptureImageActive = false
+                }
+            } catch (e: IOException) {
+                Log.d("Photo Capture", "Error in photo Capture")
+                state.isCaptureImageActive = false
+            }
+        }
+
+    return Triple(fileChooserLauncher, permissionLauncher, imageCaptureLauncher)
+}
 
 @Composable
 fun SpotCheck(config: SpotCheckConfig) {
-    var isCaptureImageActive by remember { mutableStateOf(false) }
-    var capturedImageUri by remember { mutableStateOf<Uri?>(null) }
-
+    val state = remember { SpotCheckState() }
+    val eventHandler = remember(config) { SpotCheckEventHandler(config) }
     val context = LocalContext.current
 
-
     val configuration = LocalConfiguration.current
-    val isTablet = configuration.screenWidthDp > 560
+    val isTablet = configuration.screenWidthDp > TABLET_SCREEN_WIDTH_DP
 
     var colorValue = "#000000"
     if (config.closeButtonStyle["ctaButton"]?.let { isHexColor(it) } == true) {
@@ -103,15 +348,40 @@ fun SpotCheck(config: SpotCheckConfig) {
     val additionalHeight = if (config.isBannerImageOn) 90.dp else 0.dp
     val finalHeight = if (isTablet) minHeight else minHeight + additionalHeight
 
-    var mUploadMessage: ValueCallback<Uri?>? by remember { mutableStateOf(null) }
-    var mUploadMessageArray: ValueCallback<Array<Uri?>?>? by remember { mutableStateOf(null) }
-    var audioPermissionGranted by remember { mutableStateOf(false) }
+    val (fileChooserLauncher, permissionLauncher, imageCaptureLauncher) = rememberLaunchers(
+        state = state,
+        onImageCaptured = { uri ->
+            state.mUploadMessageArray?.onReceiveValue(uri?.let { arrayOf(it) })
+            state.mUploadMessageArray = null
+            state.capturedImageUri = null
+        },
+        onFileChosen = { uris ->
+            state.mUploadMessageArray?.onReceiveValue(uris)
+            state.mUploadMessageArray = null
+        }
+    )
 
+    fun launchCamera() {
+        if (!state.isCaptureImageActive) {
+            state.isCaptureImageActive = true
+            try {
+                if (context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                    val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                    imageCaptureLauncher.launch(intent)
+                } else {
+                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                }
+            } catch (e: IOException) {
+                Log.d("Photo Capture", "Error in photo Capture")
+                state.isCaptureImageActive = false
+            }
+        }
+    }
 
     val audioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        audioPermissionGranted = isGranted
+        state.audioPermissionGranted = isGranted
     }
 
     LaunchedEffect(Unit) {
@@ -123,7 +393,7 @@ fun SpotCheck(config: SpotCheckConfig) {
         if (!isAlreadyGranted) {
             audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         } else {
-            audioPermissionGranted = true
+            state.audioPermissionGranted = true
         }
     }
 
@@ -138,117 +408,33 @@ fun SpotCheck(config: SpotCheckConfig) {
 
     config.activity = remember(context) { extractActivity(context) }
 
-    if(config.originalSoftInputMode==null) {
+    if (config.originalSoftInputMode == null) {
         config.originalSoftInputMode = config.activity?.window?.attributes?.softInputMode
     }
 
-    val fileChooserLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (mUploadMessageArray == null && mUploadMessage == null) {
-            return@rememberLauncherForActivityResult
+    DisposableEffect(Unit) {
+        onDispose {
+            config.classicWebViewRef?.destroy()
+            config.chatWebViewRef?.destroy()
+            config.classicWebViewRef = null
+            config.chatWebViewRef = null
         }
-
-        val resultCode = result.resultCode
-        val data = result.data
-
-        if (resultCode == Activity.RESULT_OK) {
-            mUploadMessageArray?.onReceiveValue(
-                WebChromeClient.FileChooserParams.parseResult(
-                    resultCode,
-                    data
-                )
-            )
-            mUploadMessageArray = null
-        } else {
-            mUploadMessageArray?.onReceiveValue(null)
-            mUploadMessageArray = null
-        }
-
     }
-
-
-    val imageCaptureLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val data: Intent? = result.data
-            val extras: Bundle? = data?.extras
-            val imageBitmap: Bitmap? = extras?.get("data") as? Bitmap
-            val filename = "image_${System.currentTimeMillis()}.png"
-            val file = File(context.filesDir, filename)
-            capturedImageUri = Uri.fromFile(file)
-            if (imageBitmap != null) {
-                try {
-
-                    FileOutputStream(file).use { out ->
-                        imageBitmap?.compress(
-                            Bitmap.CompressFormat.PNG,
-                            100,
-                            out
-                        )
-                    }
-                    mUploadMessageArray?.onReceiveValue(arrayOf(capturedImageUri))
-                    mUploadMessageArray = null
-                    capturedImageUri = null
-                } catch (e: IOException) {
-                    Log.d("Photo Capture", "Error in photo Capture")
-                    mUploadMessageArray = null
-                    capturedImageUri = null
-
-                }
-            } else {
-                mUploadMessageArray?.onReceiveValue(null)
-                mUploadMessageArray = null
-            }
-        }
-        isCaptureImageActive = false
-    }
-
-
-    val permissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            try {
-                if (isGranted) {
-
-                    val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-
-
-
-                    imageCaptureLauncher.launch(intent)
-                } else {
-                    Log.d("Photo Capture", "Camera permission denied")
-                    isCaptureImageActive = false
-                }
-            } catch (e: IOException) {
-                Log.d("Photo Capture", "Error in photo Capture")
-                isCaptureImageActive = false
-            }
-        }
 
     if (config.classicUrl.isNotEmpty()) {
-
-        val visibilityModifier = Modifier
-            .then(
-                if ((config.isMounted || config.isFullScreenMode) &&
-                    !config.isClassicLoading &&
-                    config.isVisible &&
-                    config.showSurveyContent &&
-                    config.spotCheckType == "classic"
-                ) {
-                    Modifier
-                        .alpha(1f)
-                        .zIndex(1f)
-                } else {
-                    Modifier
-                        .alpha(0f)
-                        .zIndex(-1f)
-                }
-            )
+        val visibilityModifier = if (shouldShowClassic(config)) {
+            Modifier
+                .alpha(1f)
+                .zIndex(1f)
+        } else {
+            Modifier
+                .alpha(0f)
+                .zIndex(-1f)
+        }
 
         Box(
             modifier = visibilityModifier.background(Color.Black.copy(alpha = 0.3f))
-        ){}
+        ) {}
 
         Column(
             modifier = visibilityModifier,
@@ -259,8 +445,6 @@ fun SpotCheck(config: SpotCheckConfig) {
                 else -> Arrangement.Center
             },
         ) {
-
-
             Box(
                 modifier = if (config.isFullScreenMode) {
                     Modifier.height(LocalConfiguration.current.screenHeightDp.dp)
@@ -268,14 +452,11 @@ fun SpotCheck(config: SpotCheckConfig) {
                     Modifier
                         .height(finalHeight)
                         .padding(if (config.spotChecksMode == "miniCard") 8.dp else 0.dp)
-
-
                 }
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-
                     if (config.spotChecksMode == "miniCard" && config.isCloseButtonEnabled == true) {
                         Row(
                             modifier = Modifier
@@ -312,7 +493,6 @@ fun SpotCheck(config: SpotCheckConfig) {
                         }
                     }
 
-
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -322,260 +502,17 @@ fun SpotCheck(config: SpotCheckConfig) {
                                 else RoundedCornerShape(0.dp)
                             )
                     ) {
-                        AndroidView(
-                            modifier = Modifier.fillMaxSize(),
-                            factory = { context ->
-                                WebView(context).apply {
-                                    config.classicWebViewRef = this
-                                    settings.javaScriptEnabled = true
-                                    settings.domStorageEnabled = true
-                                    settings.loadWithOverviewMode = true
-                                    settings.useWideViewPort = true
-                                    settings.setSupportZoom(true)
-                                    layoutParams = ViewGroup.LayoutParams(
-                                        ViewGroup.LayoutParams.MATCH_PARENT,
-                                        ViewGroup.LayoutParams.MATCH_PARENT
-                                    )
-
-
-
-                                    addJavascriptInterface(object : Any() {
-                                        @JavascriptInterface
-                                        fun onMessageReceive(message: String) {
-
-                                            val gson = Gson()
-                                            val spotCheckData: SpotCheckData =
-                                                gson.fromJson(message, SpotCheckData::class.java)
-                                            if (spotCheckData.type == "spotCheckData") {
-                                                val currentSize =
-                                                    spotCheckData.data?.get("currentQuestionSize") as? Map<String, Any>
-                                                val height =
-                                                    currentSize?.get("height") as Double
-                                                config.currentQuestionHeight = height
-                                            }
-                                            if (spotCheckData.type == "surveyCompleted") {
-                                                CoroutineScope(Dispatchers.IO).launch {
-                                                    config.spotCheckListener?.onSurveyResponse(
-                                                        spotCheckData.data
-                                                    )
-                                                }
-
-                                                config.onClose()
-                                            }
-                                        }
-                                    }, "Android")
-
-                                    addJavascriptInterface(object {
-                                        @JavascriptInterface
-                                        fun postMessage(message: String) {
-
-                                            try {
-                                                val jsonObject = JSONObject(message)
-                                                if (!jsonObject.has("type") || jsonObject.isNull("type") || jsonObject.get(
-                                                        "type"
-                                                    ) !is String
-                                                ) {
-                                                    return
-                                                }
-                                                if (!jsonObject.has("data") || jsonObject.isNull("data") || jsonObject.get(
-                                                        "data"
-                                                    ) !is JSONObject
-                                                ) {
-                                                    return
-                                                }
-                                                val gson = Gson()
-                                                val spotCheckData: SpotCheckData =
-                                                    gson.fromJson(message, SpotCheckData::class.java)
-
-                                                if (spotCheckData.type == "thankYouPageSubmission") {
-                                                    config.isCloseButtonEnabled = true
-                                                    config.isThankyouPageSubmission = true
-                                                    CoroutineScope(Dispatchers.IO).launch {
-                                                        config.spotCheckListener?.onSurveyResponse(
-                                                            spotCheckData.data
-                                                        )
-                                                    }
-
-                                                    if (config.spotChecksMode == "miniCard") {
-                                                        CoroutineScope(Dispatchers.Main).launch {
-                                                            delay(4000)
-                                                            config.onClose()
-                                                        }
-                                                    }
-
-                                                }
-
-                                                if (spotCheckData.type == "slideInFrame") {
-                                                    config.isMounted = true
-                                                }
-                                            } catch (e: Exception) {
-                                                Log.e("SpotCheck", e.message.toString())
-                                            }
-
-                                        }
-                                    }, "flutterSpotCheckData")
-
-                                    addJavascriptInterface(object : Any() {
-                                        @JavascriptInterface
-                                        fun captureImage() {
-                                            if(!isCaptureImageActive){
-
-                                                isCaptureImageActive = true
-
-                                                try{
-
-                                                    if(context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED){
-
-                                                        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-
-
-                                                        imageCaptureLauncher.launch(intent)
-
-                                                    }
-                                                    else{
-                                                        permissionLauncher.launch(Manifest.permission.CAMERA)
-                                                    }
-
-                                                }
-                                                catch(e: IOException){
-                                                    Log.d("Photo Capture", "Error in photo Capture")
-                                                    isCaptureImageActive=false
-                                                }
-                                            }
-                                        }
-
-                                        @JavascriptInterface
-                                        fun shareData(message: String) {
-                                            val gson = Gson()
-                                            val spotCheckData: Map<String, Any> = gson.fromJson(
-                                                message,
-                                                object : TypeToken<Map<String, Any>>() {}.type
-                                            )
-
-                                            val type = spotCheckData["type"] as? String
-                                            if (type == "surveyLoadStarted") {
-                                                CoroutineScope(Dispatchers.IO).launch {
-                                                    config.spotCheckListener?.onSurveyLoaded(
-                                                        spotCheckData
-                                                    )
-                                                }
-                                            }
-
-                                        }
-
-                                        @JavascriptInterface
-                                        fun sendPartialSubmissionData(message: String) {
-                                            val gson = Gson()
-                                            val spotCheckData: Map<String, Any> = gson.fromJson(
-                                                message,
-                                                object : TypeToken<Map<String, Any>>() {}.type
-                                            )
-
-                                            val type = spotCheckData["type"] as? String
-
-                                            if (type == "partialSubmission") {
-                                                CoroutineScope(Dispatchers.IO).launch {
-                                                    config.spotCheckListener?.onPartialSubmission(
-                                                        spotCheckData
-                                                    )
-                                                }
-                                            }
-
-                                        }
-
-                                    }, "SsAndroidSdk")
-
-                                    webViewClient = object : WebViewClient() {
-                                        override fun onPageFinished(view: WebView?, url: String?) {
-                                            super.onPageFinished(view, url)
-                                            config.isClassicLoading = false
-                                            view?.evaluateJavascript(
-                                                """
-                                            (function() {
-                                                const styleTag = document.createElement("style");
-                                                styleTag.innerHTML = `
-                                                       .surveysparrow-chat__wrapper .ss-language-selector--wrapper { 
-                                                            margin-right: 45px;                                             
-                                                       }                                      
-                                                       .close-btn-chat--spotchecks {
-                                                            display: none !important;
-                                                       }                                       
-                                                `;
-                                                document.body.appendChild(styleTag);
-                                            })();
-                                            """.trimIndent(),
-                                                null
-                                            )
-                                        }
-
-                                    }
-
-                                    webChromeClient = object : WebChromeClient() {
-                                        override fun onShowFileChooser(
-                                            webView: WebView?,
-                                            filePathCallback: ValueCallback<Array<Uri?>?>?,
-                                            fileChooserParams: FileChooserParams?
-                                        ): Boolean {
-
-                                            if (mUploadMessageArray != null) {
-                                                mUploadMessageArray?.onReceiveValue(null)
-                                            }
-
-
-                                            if (isCaptureImageActive) {
-                                                mUploadMessageArray = filePathCallback
-                                                return true
-                                            }
-
-                                            else{
-                                                mUploadMessageArray = filePathCallback
-                                                val intent = fileChooserParams?.createIntent()
-                                                try {
-                                                    if (intent != null) {
-                                                        fileChooserLauncher.launch(intent)
-                                                    }
-                                                } catch (e: ActivityNotFoundException) {
-                                                    mUploadMessageArray = null
-                                                    Log.d("Upload-Questions", "Cannot open File chooser")
-                                                    return false
-                                                }
-                                            }
-                                            return true
-                                        }
-
-                                        override fun onPermissionRequest(request: PermissionRequest) {
-                                            (context as? Activity)?.runOnUiThread {
-                                                val requestedResources = request.resources
-
-                                                val permissions = requestedResources.mapNotNull {
-                                                    when (it) {
-                                                        PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
-                                                        else -> null
-                                                    }
-                                                }
-
-                                                val allGranted = permissions.all {
-                                                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                                                }
-
-                                                if (allGranted) {
-                                                    request.grant(request.resources)
-                                                } else {
-                                                    pendingPermissionRequest = request
-                                                    ActivityCompat.requestPermissions(
-                                                        context,
-                                                        permissions.toTypedArray(),
-                                                        REQUEST_CODE_PERMISSIONS
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                    }
-
-                                    loadUrl(config.classicUrl)
-                                }
-                            }
+                        SpotCheckWebView(
+                            url = config.classicUrl,
+                            config = config,
+                            state = state,
+                            eventHandler = eventHandler,
+                            onPageFinished = {
+                                    config.isClassicLoading = false
+                                },
+                            fileChooserLauncher = fileChooserLauncher,
+                            launchCamera = ::launchCamera,
+                            setWebViewRef = { config.classicWebViewRef = it }
                         )
 
                         if ((config.currentQuestionHeight != 0.0 || config.isFullScreenMode)
@@ -626,20 +563,18 @@ fun SpotCheck(config: SpotCheckConfig) {
                         }
                     }
                 }
-
-
             }
         }
     }
 
+    if (config.chatUrl.isNotEmpty()) {
 
-        if (config.chatUrl.isNotEmpty()) {
+        val visibilityModifier =
+            if (shouldShowChat(config)) Modifier else Modifier.graphicsLayer { alpha = 0f }
 
-        val visibilityModifier = if ((config.isFullScreenMode) &&  config.isVisible && config.showSurveyContent && !config.isChatLoading && config.spotCheckType=="chat") Modifier else Modifier.graphicsLayer { alpha = 0f }
-
-            Box(
+        Box(
             modifier = visibilityModifier.background(Color.Black.copy(alpha = 0.3f))
-        ){}
+        ) {}
 
         Column(
             modifier = visibilityModifier,
@@ -656,259 +591,20 @@ fun SpotCheck(config: SpotCheckConfig) {
                 } else {
                     Modifier.height(finalHeight)
                 }
-
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    AndroidView(
-                        modifier = Modifier.fillMaxSize(),
-                        factory = { context ->
-                            WebView(context).apply {
-                                config.chatWebViewRef = this
-                                settings.javaScriptEnabled = true
-                                settings.domStorageEnabled = true
-                                settings.loadWithOverviewMode = true
-                                settings.useWideViewPort = true
-                                settings.setSupportZoom(true)
-                                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                                setLayerType(View.LAYER_TYPE_HARDWARE, null)
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                                    addJavascriptInterface(object : Any() {
-                                        @JavascriptInterface
-                                        fun onMessageReceive(message: String) {
-
-                                            val gson = Gson()
-                                            val spotCheckData: SpotCheckData =
-                                                gson.fromJson(message, SpotCheckData::class.java)
-                                            if (spotCheckData.type == "spotCheckData") {
-                                                val currentSize =
-                                                    spotCheckData.data?.get("currentQuestionSize") as? Map<String, Any>
-                                                val height =
-                                                    currentSize?.get("height") as Double
-                                                config.currentQuestionHeight = height
-                                            }
-                                            if (spotCheckData.type == "surveyCompleted") {
-                                                CoroutineScope(Dispatchers.IO).launch {
-                                                    config.spotCheckListener?.onSurveyResponse(
-                                                        spotCheckData.data
-                                                    )
-                                                }
-
-                                                config.onClose()
-                                            }
-                                        }
-                                    }, "Android")
-
-                                    addJavascriptInterface(object {
-                                        @JavascriptInterface
-                                        fun postMessage(message: String) {
-
-                                            try {
-                                                val jsonObject = JSONObject(message)
-                                                if (!jsonObject.has("type") || jsonObject.isNull("type") || jsonObject.get(
-                                                        "type"
-                                                    ) !is String
-                                                ) {
-                                                    return
-                                                }
-                                                if (!jsonObject.has("data") || jsonObject.isNull("data") || jsonObject.get(
-                                                        "data"
-                                                    ) !is JSONObject
-                                                ) {
-                                                    return
-                                                }
-                                                val gson = Gson()
-                                                val spotCheckData: SpotCheckData =
-                                                    gson.fromJson(message, SpotCheckData::class.java)
-
-                                                if (spotCheckData.type == "thankYouPageSubmission") {
-                                                    config.isCloseButtonEnabled = true
-                                                    config.isThankyouPageSubmission = true
-                                                    CoroutineScope(Dispatchers.IO).launch {
-                                                        config.spotCheckListener?.onSurveyResponse(
-                                                            spotCheckData.data
-                                                        )
-                                                    }
-
-                                                    if (config.spotChecksMode == "miniCard") {
-                                                        CoroutineScope(Dispatchers.Main).launch {
-                                                            delay(4000)
-                                                            config.onClose()
-                                                        }
-                                                    }
-                                                }
-
-                                                if (spotCheckData.type == "slideInFrame") {
-                                                    config.isMounted = true
-                                                }
-                                            } catch (e: Exception) {
-                                                Log.e("SpotCheck", e.message.toString())
-                                            }
-
-                                        }
-                                    }, "flutterSpotCheckData")
-
-
-                                    addJavascriptInterface(object : Any() {
-                                        @JavascriptInterface
-                                        fun captureImage() {
-                                            if (!isCaptureImageActive) {
-
-                                                isCaptureImageActive = true
-
-                                                try {
-
-                                                    if (context.checkSelfPermission(Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-
-                                                        val intent =
-                                                            Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-
-
-                                                        imageCaptureLauncher.launch(intent)
-
-                                                    } else {
-                                                        permissionLauncher.launch(Manifest.permission.CAMERA)
-                                                    }
-
-                                                } catch (e: IOException) {
-                                                    Log.d("Photo Capture", "Error in photo Capture")
-                                                    isCaptureImageActive = false
-                                                }
-                                            }
-                                        }
-
-                                        @JavascriptInterface
-                                        fun shareData(message: String) {
-                                            val gson = Gson()
-                                            val spotCheckData: Map<String, Any> = gson.fromJson(
-                                                message,
-                                                object : TypeToken<Map<String, Any>>() {}.type
-                                            )
-
-                                            val type = spotCheckData["type"] as? String
-                                            if (type == "surveyLoadStarted") {
-                                                CoroutineScope(Dispatchers.IO).launch {
-                                                    config.spotCheckListener?.onSurveyLoaded(
-                                                        spotCheckData
-                                                    )
-                                                }
-                                            }
-
-                                        }
-
-                                        @JavascriptInterface
-                                        fun sendPartialSubmissionData(message: String) {
-                                            val gson = Gson()
-                                            val spotCheckData: Map<String, Any> = gson.fromJson(
-                                                message,
-                                                object : TypeToken<Map<String, Any>>() {}.type
-                                            )
-
-                                            val type = spotCheckData["type"] as? String
-
-                                            if (type == "partialSubmission") {
-                                                CoroutineScope(Dispatchers.IO).launch {
-                                                    config.spotCheckListener?.onPartialSubmission(
-                                                        spotCheckData
-                                                    )
-                                                }
-                                            }
-
-                                        }
-
-                                    }, "SsAndroidSdk")
-
-                                webViewClient = object : WebViewClient() {
-                                    override fun onPageFinished(view: WebView?, url: String?) {
-                                        super.onPageFinished(view, url)
-                                        config.isChatLoading = false
-                                       
-                                        view?.evaluateJavascript(
-                                            """
-                                            (function() {
-                                                const styleTag = document.createElement("style");
-                                                styleTag.innerHTML = `
-                                                       .surveysparrow-chat__wrapper .ss-language-selector--wrapper { 
-                                                            margin-right: 45px;                                             
-                                                       }                                      
-                                                       .close-btn-chat--spotchecks {
-                                                            display: none !important;
-                                                       }                                       
-                                                `;
-                                                document.body.appendChild(styleTag);
-                                            })();
-                                            """.trimIndent(),
-                                            null
-                                        )
-                                    }
-                                }
-
-                                webChromeClient = object : WebChromeClient() {
-                                    override fun onShowFileChooser(
-                                        webView: WebView?,
-                                        filePathCallback: ValueCallback<Array<Uri?>?>?,
-                                        fileChooserParams: FileChooserParams?
-                                    ): Boolean {
-                                        if (mUploadMessageArray != null) {
-                                            mUploadMessageArray?.onReceiveValue(null)
-                                        }
-
-                                        if (isCaptureImageActive) {
-                                            mUploadMessageArray = filePathCallback
-                                            return true
-                                        } else {
-                                            mUploadMessageArray = filePathCallback
-                                            val intent = fileChooserParams?.createIntent()
-                                            try {
-                                                if (intent != null) {
-                                                    fileChooserLauncher.launch(intent)
-                                                }
-                                            } catch (e: ActivityNotFoundException) {
-                                                mUploadMessageArray = null
-                                                Log.d(
-                                                    "Upload-Questions",
-                                                    "Cannot open File chooser"
-                                                )
-                                                return false
-                                            }
-                                        }
-                                        return true
-                                    }
-
-                                    override fun onPermissionRequest(request: PermissionRequest) {
-                                        (context as? Activity)?.runOnUiThread {
-                                            val requestedResources = request.resources
-
-                                            val permissions = requestedResources.mapNotNull {
-                                                when (it) {
-                                                    PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
-                                                    else -> null
-                                                }
-                                            }
-
-                                            val allGranted = permissions.all {
-                                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                                            }
-
-                                            if (allGranted) {
-                                                request.grant(request.resources)
-                                            } else {
-                                                pendingPermissionRequest = request
-                                                ActivityCompat.requestPermissions(
-                                                    context,
-                                                    permissions.toTypedArray(),
-                                                    REQUEST_CODE_PERMISSIONS
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                loadUrl(config.chatUrl)
-                            }
-                        }
+                    SpotCheckWebView(
+                        url = config.chatUrl,
+                        config = config,
+                        state = state,
+                        eventHandler = eventHandler,
+                        onPageFinished = {
+                                config.isChatLoading = false
+                            },
+                        fileChooserLauncher = fileChooserLauncher,
+                        launchCamera = ::launchCamera,
+                        setWebViewRef = { config.chatWebViewRef = it },
+                        isChat = true
                     )
 
                     if ((config.currentQuestionHeight != 0.0 || config.isFullScreenMode) && config.isCloseButtonEnabled) {
@@ -936,7 +632,6 @@ fun SpotCheck(config: SpotCheckConfig) {
         }
     }
 
-
     if (config.isSpotCheckButton && !config.showSurveyContent) {
         val buttonConfigMap = config.spotCheckButtonConfig
         if (buttonConfigMap.isNotEmpty()) {
@@ -962,15 +657,140 @@ fun SpotCheck(config: SpotCheckConfig) {
         }
     }
 
+}
 
+@Composable
+private fun SpotCheckWebView(
+    url: String,
+    config: SpotCheckConfig,
+    state: SpotCheckState,
+    eventHandler: SpotCheckEventHandler,
+    onPageFinished: () -> Unit,
+    fileChooserLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>,
+    launchCamera: () -> Unit,
+    setWebViewRef: (WebView) -> Unit,
+    isChat: Boolean = false
+) {
+    val context = LocalContext.current
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = {
+            WebView(it).apply {
+                setWebViewRef(this)
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.loadWithOverviewMode = true
+                settings.useWideViewPort = true
+                settings.setSupportZoom(true)
+                if (isChat) {
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                }
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
 
+                addJavascriptInterface(createAndroidJsInterface(eventHandler), JsBridgeNames.ANDROID)
+                addJavascriptInterface(
+                    createFlutterJsInterface(eventHandler),
+                    JsBridgeNames.FLUTTER
+                )
+                addJavascriptInterface(
+                    createSsAndroidSdkJsInterface(eventHandler, launchCamera),
+                    JsBridgeNames.NATIVE
+                )
+
+                webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        onPageFinished()
+                        view?.evaluateJavascript(
+                            """
+                                (function() {
+                                    const styleTag = document.createElement("style");
+                                    styleTag.innerHTML = `
+                                           .surveysparrow-chat__wrapper .ss-language-selector--wrapper { 
+                                                margin-right: 45px;                                             
+                                           }                                      
+                                           .close-btn-chat--spotchecks {
+                                                display: none !important;
+                                           }                                       
+                                    `;
+                                    document.body.appendChild(styleTag);
+                                })();
+                                """.trimIndent(),
+                            null
+                        )
+                    }
+                }
+
+                webChromeClient = object : WebChromeClient() {
+                    override fun onShowFileChooser(
+                        webView: WebView?,
+                        filePathCallback: ValueCallback<Array<Uri?>?>?,
+                        fileChooserParams: FileChooserParams?
+                    ): Boolean {
+                        if (state.mUploadMessageArray != null) {
+                            state.mUploadMessageArray?.onReceiveValue(null)
+                        }
+
+                        if (state.isCaptureImageActive) {
+                            state.mUploadMessageArray = filePathCallback
+                            return true
+                        }
+
+                        state.mUploadMessageArray = filePathCallback
+                        val intent = fileChooserParams?.createIntent()
+                        try {
+                            if (intent != null) {
+                                fileChooserLauncher.launch(intent)
+                            }
+                        } catch (e: ActivityNotFoundException) {
+                            state.mUploadMessageArray = null
+                            Log.d("Upload-Questions", "Cannot open File chooser")
+                            return false
+                        }
+                        return true
+                    }
+
+                    override fun onPermissionRequest(request: PermissionRequest) {
+                        (context as? Activity)?.runOnUiThread {
+                            val requestedResources = request.resources
+                            val permissions = requestedResources.mapNotNull {
+                                when (it) {
+                                    PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
+                                    else -> null
+                                }
+                            }
+
+                            val allGranted = permissions.all {
+                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                            }
+
+                            if (allGranted) {
+                                request.grant(request.resources)
+                            } else {
+                                ActivityCompat.requestPermissions(
+                                    context,
+                                    permissions.toTypedArray(),
+                                    1234
+                                )
+                            }
+                        }
+                    }
+                }
+                loadUrl(url)
+            }
+        }
+    )
 }
 
 suspend fun trackScreen(screen: String, config: SpotCheckConfig) {
     val response = config.sendRequestForTrackScreen(screen)
     if (response) {
-            config.openSpot()
-            Log.i("TrackScreen", config.isVisible.toString())
+        config.openSpot()
+        Log.i("TrackScreen", config.isVisible.toString())
     } else {
         Log.i("TrackScreen", "Failed")
     }
@@ -984,8 +804,8 @@ suspend fun closeSpotchecks(config: SpotCheckConfig){
 suspend fun trackEvent(screen: String, event: Map<String, Any>, config: SpotCheckConfig) {
     val response = config.sendEventTriggerRequest(screen, event)
     if (response) {
-            config.openSpot()
-            Log.i("TrackEvent", config.isVisible.toString())
+        config.openSpot()
+        Log.i("TrackEvent", config.isVisible.toString())
     } else {
         Log.i("TrackScreen", "Failed")
     }

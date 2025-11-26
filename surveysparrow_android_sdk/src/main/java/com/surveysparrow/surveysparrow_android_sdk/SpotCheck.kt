@@ -143,7 +143,6 @@ private class SpotCheckEventHandler(private val config: SpotCheckConfig) {
                 gson.fromJson(message, SpotCheckData::class.java)
 
             if (spotCheckData.type == SpotCheckEvents.THANK_YOU_PAGE_SUBMISSION) {
-                config.isCloseButtonEnabled = true
                 config.isThankyouPageSubmission = true
                 CoroutineScope(Dispatchers.IO).launch {
                     config.spotCheckListener?.onSurveyResponse(
@@ -151,11 +150,14 @@ private class SpotCheckEventHandler(private val config: SpotCheckConfig) {
                     )
                 }
 
-                if (config.spotChecksMode == "miniCard") {
+                if (config.spotChecksMode == "miniCard" && !config.isCloseButtonEnabled) {
                     CoroutineScope(Dispatchers.Main).launch {
                         delay(THANK_YOU_PAGE_DELAY)
                         config.onClose()
                     }
+                }
+                else{
+                    config.isCloseButtonEnabled = true
                 }
             }
             if (spotCheckData.type == SpotCheckEvents.SLIDE_IN_FRAME) {

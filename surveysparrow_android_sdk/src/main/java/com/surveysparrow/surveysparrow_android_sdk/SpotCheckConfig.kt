@@ -700,9 +700,6 @@ class SpotCheckConfig(
                 val isLoading = if (isChat) isChatLoading else isClassicLoading
 
                 if (!isLoading) {
-                    if(isChat) {
-                        delay(1200)
-                    }
                     webView?.evaluateJavascript(js, null)
                     isInjected = true
                 } else {
@@ -711,7 +708,6 @@ class SpotCheckConfig(
                             .filter { !it }
                             .first()
                             .let {
-                                delay(1200)
                                 webView?.evaluateJavascript(js, null)
                                 isInjected = true
                             }

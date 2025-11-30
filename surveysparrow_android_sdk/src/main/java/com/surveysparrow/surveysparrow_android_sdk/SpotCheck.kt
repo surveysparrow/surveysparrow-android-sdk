@@ -94,6 +94,8 @@ private object SpotCheckEvents {
     const val SPOTCHECK_DATA = "spotCheckData"
     const val SURVEY_LOAD_STARTED = "surveyLoadStarted"
     const val PARTIAL_SUBMISSION = "partialSubmission"
+    const val CLASSIC_LOADED = "classicLoadEvent"
+    const val CHAT_LOADED = "chatLoadEvent"
 }
 
 private const val THANK_YOU_PAGE_DELAY = 4000L
@@ -162,6 +164,12 @@ private class SpotCheckEventHandler(private val config: SpotCheckConfig) {
             }
             if (spotCheckData.type == SpotCheckEvents.SLIDE_IN_FRAME) {
                 config.isMounted = true
+            }
+            if (spotCheckData.type == SpotCheckEvents.CLASSIC_LOADED){
+                config.isClassicLoading = false
+            }
+            if (spotCheckData.type == SpotCheckEvents.CHAT_LOADED){
+                config.isChatLoading = false
             }
         } catch (e: Exception) {
             Log.e("SpotCheck", e.message.toString())
@@ -509,9 +517,7 @@ fun SpotCheck(config: SpotCheckConfig) {
                             config = config,
                             state = state,
                             eventHandler = eventHandler,
-                            onPageFinished = {
-                                    config.isClassicLoading = false
-                                },
+                            onPageFinished = {},
                             fileChooserLauncher = fileChooserLauncher,
                             launchCamera = ::launchCamera,
                             setWebViewRef = { config.classicWebViewRef = it }
@@ -600,9 +606,7 @@ fun SpotCheck(config: SpotCheckConfig) {
                         config = config,
                         state = state,
                         eventHandler = eventHandler,
-                        onPageFinished = {
-                                config.isChatLoading = false
-                            },
+                        onPageFinished = {},
                         fileChooserLauncher = fileChooserLauncher,
                         launchCamera = ::launchCamera,
                         setWebViewRef = { config.chatWebViewRef = it },

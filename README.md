@@ -6,13 +6,13 @@
 
 ### SpotCheck Documentation is available here 
 
-#### [SpotCheck-Android-Docs](https://surveysparrow.gitbook.io/spotchecks/how-to-use-spotchecks/mobile-spotcheck/android)
+#### [SpotCheck-Android-Docs](https://developers.surveysparrow.com/spotchecks/mobile-spotchecks/android)
 
 <br>
 
 #### Survey's Normal SDK Share is available here
 
-#### [Normal SDK Share](https://github.com/surveysparrow/surveysparrow-android-sdk/tree/0.5.3)
+#### [Normal SDK Share](https://github.com/surveysparrow/surveysparrow-android-sdk/tree/0.6.6)
 
 <br>
 

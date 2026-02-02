@@ -422,6 +422,12 @@ fun SpotCheck(config: SpotCheckConfig) {
         config.originalSoftInputMode = config.activity?.window?.attributes?.softInputMode
     }
 
+DisposableEffect(Unit) {
+    onDispose {
+    config.onClose(isNavigation = true)
+    }
+}
+
     if (config.classicUrl.isNotEmpty()) {
         val visibilityModifier = if (shouldShowClassic(config)) {
             Modifier

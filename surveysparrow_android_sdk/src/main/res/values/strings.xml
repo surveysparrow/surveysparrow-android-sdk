@@ -1,0 +1,8 @@
+<resources>
+    <string name="ss_activity_title">Feedback</string>
+    <string name="no_network_message">No Network!</string>
+    <string name="dialog_title">Rate us</string>
+    <string name="dialog_message">Share your feedback and let us know how we are doing</string>
+    <string name="dialog_positive_button">Rate now</string>
+    <string name="dialog_negative_button">Later</string>
+</resources>

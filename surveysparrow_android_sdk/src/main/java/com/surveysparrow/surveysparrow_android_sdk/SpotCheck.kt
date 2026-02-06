@@ -422,14 +422,11 @@ fun SpotCheck(config: SpotCheckConfig) {
         config.originalSoftInputMode = config.activity?.window?.attributes?.softInputMode
     }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            config.classicWebViewRef?.destroy()
-            config.chatWebViewRef?.destroy()
-            config.classicWebViewRef = null
-            config.chatWebViewRef = null
-        }
+DisposableEffect(Unit) {
+    onDispose {
+    config.onClose(isNavigation = true)
     }
+}
 
     if (config.classicUrl.isNotEmpty()) {
         val visibilityModifier = if (shouldShowClassic(config)) {
@@ -678,118 +675,147 @@ private fun SpotCheckWebView(
     isChat: Boolean = false
 ) {
     val context = LocalContext.current
+
+    val webView = remember(url, isChat) {
+        val existingWebView = if (isChat) config.chatWebViewRef else config.classicWebViewRef
+
+        existingWebView ?: createWebView(
+            context = context,
+            url = url,
+            isChat = isChat,
+            state = state,
+            eventHandler = eventHandler,
+            onPageFinished = onPageFinished,
+            fileChooserLauncher = fileChooserLauncher,
+            launchCamera = launchCamera,
+            setWebViewRef = setWebViewRef
+        )
+    }
+
     AndroidView(
         modifier = Modifier.fillMaxSize(),
-        factory = {
-            WebView(it).apply {
-                setWebViewRef(this)
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.loadWithOverviewMode = true
-                settings.useWideViewPort = true
-                settings.setSupportZoom(true)
-                if (isChat) {
-                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        factory = { webView },
+    )
+}
+
+private fun createWebView(
+    context: Context,
+    url: String,
+    isChat: Boolean,
+    state: SpotCheckState,
+    eventHandler: SpotCheckEventHandler,
+    onPageFinished: () -> Unit,
+    fileChooserLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>,
+    launchCamera: () -> Unit,
+    setWebViewRef: (WebView) -> Unit
+): WebView {
+    return WebView(context).apply {
+        setWebViewRef(this)
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.loadWithOverviewMode = true
+        settings.useWideViewPort = true
+        settings.setSupportZoom(true)
+        if (isChat) {
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        }
+        layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+
+        addJavascriptInterface(createAndroidJsInterface(eventHandler), JsBridgeNames.ANDROID)
+        addJavascriptInterface(
+            createFlutterJsInterface(eventHandler),
+            JsBridgeNames.FLUTTER
+        )
+        addJavascriptInterface(
+            createSsAndroidSdkJsInterface(eventHandler, launchCamera),
+            JsBridgeNames.NATIVE
+        )
+
+        webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                onPageFinished()
+                view?.evaluateJavascript(
+                    """
+                        (function() {
+                            const styleTag = document.createElement("style");
+                            styleTag.innerHTML = `
+                                   .surveysparrow-chat__wrapper .ss-language-selector--wrapper { 
+                                        margin-right: 45px;                                             
+                                   }                                      
+                                   .close-btn-chat--spotchecks {
+                                        display: none !important;
+                                   }                                       
+                            `;
+                            document.body.appendChild(styleTag);
+                        })();
+                        """.trimIndent(),
+                    null
+                )
+            }
+        }
+
+        webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri?>?>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                if (state.mUploadMessageArray != null) {
+                    state.mUploadMessageArray?.onReceiveValue(null)
                 }
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
 
-                addJavascriptInterface(createAndroidJsInterface(eventHandler), JsBridgeNames.ANDROID)
-                addJavascriptInterface(
-                    createFlutterJsInterface(eventHandler),
-                    JsBridgeNames.FLUTTER
-                )
-                addJavascriptInterface(
-                    createSsAndroidSdkJsInterface(eventHandler, launchCamera),
-                    JsBridgeNames.NATIVE
-                )
+                if (state.isCaptureImageActive) {
+                    state.mUploadMessageArray = filePathCallback
+                    return true
+                }
 
-                webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        onPageFinished()
-                        view?.evaluateJavascript(
-                            """
-                                (function() {
-                                    const styleTag = document.createElement("style");
-                                    styleTag.innerHTML = `
-                                           .surveysparrow-chat__wrapper .ss-language-selector--wrapper { 
-                                                margin-right: 45px;                                             
-                                           }                                      
-                                           .close-btn-chat--spotchecks {
-                                                display: none !important;
-                                           }                                       
-                                    `;
-                                    document.body.appendChild(styleTag);
-                                })();
-                                """.trimIndent(),
-                            null
+                state.mUploadMessageArray = filePathCallback
+                val intent = fileChooserParams?.createIntent()
+                try {
+                    if (intent != null) {
+                        fileChooserLauncher.launch(intent)
+                    }
+                } catch (e: ActivityNotFoundException) {
+                    state.mUploadMessageArray = null
+                    Log.d("Upload-Questions", "Cannot open File chooser")
+                    return false
+                }
+                return true
+            }
+
+            override fun onPermissionRequest(request: PermissionRequest) {
+                (context as? Activity)?.runOnUiThread {
+                    val requestedResources = request.resources
+                    val permissions = requestedResources.mapNotNull {
+                        when (it) {
+                            PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
+                            else -> null
+                        }
+                    }
+
+                    val allGranted = permissions.all {
+                        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                    }
+
+                    if (allGranted) {
+                        request.grant(request.resources)
+                    } else {
+                        ActivityCompat.requestPermissions(
+                            context,
+                            permissions.toTypedArray(),
+                            1234
                         )
                     }
                 }
-
-                webChromeClient = object : WebChromeClient() {
-                    override fun onShowFileChooser(
-                        webView: WebView?,
-                        filePathCallback: ValueCallback<Array<Uri?>?>?,
-                        fileChooserParams: FileChooserParams?
-                    ): Boolean {
-                        if (state.mUploadMessageArray != null) {
-                            state.mUploadMessageArray?.onReceiveValue(null)
-                        }
-
-                        if (state.isCaptureImageActive) {
-                            state.mUploadMessageArray = filePathCallback
-                            return true
-                        }
-
-                        state.mUploadMessageArray = filePathCallback
-                        val intent = fileChooserParams?.createIntent()
-                        try {
-                            if (intent != null) {
-                                fileChooserLauncher.launch(intent)
-                            }
-                        } catch (e: ActivityNotFoundException) {
-                            state.mUploadMessageArray = null
-                            Log.d("Upload-Questions", "Cannot open File chooser")
-                            return false
-                        }
-                        return true
-                    }
-
-                    override fun onPermissionRequest(request: PermissionRequest) {
-                        (context as? Activity)?.runOnUiThread {
-                            val requestedResources = request.resources
-                            val permissions = requestedResources.mapNotNull {
-                                when (it) {
-                                    PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
-                                    else -> null
-                                }
-                            }
-
-                            val allGranted = permissions.all {
-                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                            }
-
-                            if (allGranted) {
-                                request.grant(request.resources)
-                            } else {
-                                ActivityCompat.requestPermissions(
-                                    context,
-                                    permissions.toTypedArray(),
-                                    1234
-                                )
-                            }
-                        }
-                    }
-                }
-                loadUrl(url)
             }
         }
-    )
+        loadUrl(url)
+    }
 }
 
 suspend fun trackScreen(screen: String, config: SpotCheckConfig) {

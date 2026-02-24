@@ -26,7 +26,9 @@ import java.util.TimeZone
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import kotlinx.coroutines.delay
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 
 class SpotCheckConfig(
     var domainName: String,
@@ -651,42 +653,43 @@ class SpotCheckConfig(
             val apiService = RetrofitClient.create("https://$domainName")
             val userAgent = getUserAgent()
             val response = apiService.contentApi(spotCheckURL, userAgent)
-            val responseBodyString = response.body()?.string() ?: return
+            val responseBodyString = response.body()?.string() ?: ""
 
-            val gson = Gson()
-            val dataType = object : TypeToken<Map<String, Any?>>() {}.type
+            val gson = GsonBuilder().serializeNulls().disableHtmlEscaping().create()
 
-            val data: Map<String, Any?> =
+            val dataObj: JsonObject =
                 try {
                     if (responseBodyString.trim().startsWith("{")) {
-                        gson.fromJson(responseBodyString, dataType)
+                        JsonParser.parseString(responseBodyString).asJsonObject
                     } else {
-                        emptyMap()
+                        JsonObject()
                     }
                 } catch (_: Exception) {
-                    emptyMap()
+                    JsonObject()
                 }
 
-
-            val config = data["config"] as? Map<*, *>
+            val config = dataObj.getAsJsonObject("config")
             val themeInfo = config?.get("generatedCSS")
 
-            val themePayload = mapOf(
-                "type" to "THEME_UPDATE_SPOTCHECK",
-                "themeInfo" to themeInfo
-            )
+            val themePayload = JsonObject().apply {
+                addProperty("type", "THEME_UPDATE_SPOTCHECK")
+                add("themeInfo", themeInfo)
+            }
 
-            val payload = mapOf(
-                "type" to "RESET_STATE",
-                "state" to mapOf<String, Any?>(
-                    *(data.map { it.key to it.value }.toTypedArray()),
-                    "skip" to true,
-                    "spotCheckAppearance" to appearance + ("targetType" to "MOBILE"),
-                    "spotcheckUrl" to screenName,
-                    "traceId" to traceId,
-                    "elementBuilderParams" to (variables ?: emptyMap())
-                ) as Map<String, Map<String, Any>>
-            )
+            val appearanceObj = gson.toJsonTree(appearance).asJsonObject
+            appearanceObj.addProperty("targetType", "MOBILE")
+
+            val stateObj = dataObj.deepCopy()
+            stateObj.addProperty("skip", true)
+            stateObj.add("spotCheckAppearance", appearanceObj)
+            stateObj.addProperty("spotcheckUrl", screenName)
+            stateObj.addProperty("traceId", traceId)
+            stateObj.add("elementBuilderParams", gson.toJsonTree(variables ?: emptyMap<String, Any>()))
+
+            val payload = JsonObject().apply {
+                addProperty("type", "RESET_STATE")
+                add("state", stateObj)
+            }
 
             val js = """
             (function() {

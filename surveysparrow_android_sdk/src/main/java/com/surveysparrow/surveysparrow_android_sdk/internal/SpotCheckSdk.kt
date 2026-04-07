@@ -41,7 +41,7 @@ internal class SpotCheckSdk private constructor() {
     private lateinit var keyboard: KeyboardAdapter
 
     private var isInitialized = false
-    private val initDeferred = CompletableDeferred<Unit>()
+    private var initDeferred = CompletableDeferred<Unit>()
     private var domainName: String = ""
     private var targetToken: String = ""
 
@@ -57,57 +57,65 @@ internal class SpotCheckSdk private constructor() {
     ) {
         if (isInitialized) return
 
-        this.domainName = domainName
-        this.targetToken = targetToken
+        try {
+            this.domainName = domainName
+            this.targetToken = targetToken
 
-        storage = StorageAdapter(preferences)
-        listener = ListenerAdapter().apply { this.listener = spotCheckListener }
-        sentry = SentryAdapter(domainName)
-        keyboard = KeyboardAdapter()
+            storage = StorageAdapter(preferences)
+            listener = ListenerAdapter().apply { this.listener = spotCheckListener }
+            sentry = SentryAdapter(domainName)
+            keyboard = KeyboardAdapter()
 
-        jsEngine = JsEngine(context, domainName)
-        jsEngine.initialize()
+            jsEngine = JsEngine(context, domainName)
+            jsEngine.initialize()
 
-        executeBridge = ExecuteBridge(jsEngine, storage, listener, sentry, keyboard)
-        sentry.executeBridge = executeBridge::execute as suspend (String, JSONObject?) -> String?
+            executeBridge = ExecuteBridge(jsEngine, storage, listener, sentry, keyboard)
+            sentry.executeBridge = executeBridge::execute as suspend (String, JSONObject?) -> String?
 
-        registerDefaultComponents()
+            registerDefaultComponents()
 
-        registerCloseButton(executeBridge)
-        registerWebViewRenderer(executeBridge)
-        registerSpotCheckButton(executeBridge)
+            registerCloseButton(executeBridge)
+            registerWebViewRenderer(executeBridge)
+            registerSpotCheckButton(executeBridge)
 
-        val initParams = JSONObject().apply {
-            put("domainName", domainName)
-            put("targetToken", targetToken)
-            put("userDetails", JSONObject(userDetails))
-            put("variables", JSONObject(variables))
-            put("customProperties", JSONObject(customProperties))
-            put("visitor", buildVisitorInfo())
-            put("framework", "android")
-            put("userAgent", buildUserAgent())
+            val initParams = JSONObject().apply {
+                put("domainName", domainName)
+                put("targetToken", targetToken)
+                put("userDetails", JSONObject(userDetails))
+                put("variables", JSONObject(variables))
+                put("customProperties", JSONObject(customProperties))
+                put("visitor", buildVisitorInfo())
+                put("framework", "android")
+                put("userAgent", buildUserAgent())
+                put("traceId", storage.loadData(false))
+            }
+            SpotCheckStore.dispatch(JSONObject().apply {
+                put("params", initParams)
+            })
+
+            val response = SpotCheckApiClient.fetchInitData(domainName)
+                ?: throw IllegalStateException("SpotCheck init failed: mobile/init returned null or non-OK response")
+
+            val componentSchemas = response.optJSONObject("componentSchemas")
+            if (componentSchemas != null) {
+                ComponentStore.loadFromResponse(componentSchemas)
+            }
+
+            FunctionStore.loadFromResponse(response)
+
+            val functionsJson = buildFunctionsJsonForEngine(response)
+            jsEngine.storeFunctions(functionsJson)
+
+            executeBridge.execute("initializeSpotcheckComponent", initParams)
+
+            isInitialized = true
+            initDeferred.complete(Unit)
+        } catch (e: Exception) {
+            if (!initDeferred.isCompleted) {
+                initDeferred.completeExceptionally(e)
+            }
+            throw e
         }
-        SpotCheckStore.dispatch(JSONObject().apply {
-            put("params", initParams)
-        })
-
-        val response = SpotCheckApiClient.fetchInitData(domainName) ?: return
-
-
-        val componentSchemas = response.optJSONObject("componentSchemas")
-        if (componentSchemas != null) {
-            ComponentStore.loadFromResponse(componentSchemas)
-        }
-
-        FunctionStore.loadFromResponse(response)
-
-        val functionsJson = buildFunctionsJsonForEngine(response)
-        jsEngine.storeFunctions(functionsJson)
-
-        executeBridge.execute("initializeSpotcheckComponent", initParams)
-
-        isInitialized = true
-        initDeferred.complete(Unit)
     }
 
     private suspend fun awaitInit() {
@@ -170,7 +178,15 @@ internal class SpotCheckSdk private constructor() {
     }
 
     fun destroy() {
-        jsEngine.destroy()
+        if (!initDeferred.isCompleted) {
+            initDeferred.completeExceptionally(
+                IllegalStateException("SpotCheckSdk destroyed before initialization completed"),
+            )
+        }
+        initDeferred = CompletableDeferred()
+        if (::jsEngine.isInitialized) {
+            jsEngine.destroy()
+        }
         SpotCheckStore.reset()
         FunctionStore.reset()
         ComponentStore.reset()

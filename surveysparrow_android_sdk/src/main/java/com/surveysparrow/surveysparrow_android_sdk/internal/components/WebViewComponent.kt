@@ -16,6 +16,8 @@ import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -288,12 +290,17 @@ private fun WebViewRendererContent(
                     }
 
                     override fun onReceivedError(
-                        view: WebView?, errorCode: Int, description: String?, failingUrl: String?
+                        view: WebView?,
+                        request: WebResourceRequest?,
+                        error: WebResourceError?,
                     ) {
+                        if (request?.isForMainFrame != true) return
                         CoroutineScope(Dispatchers.IO).launch {
                             executeBridge.execute(
                                 "webviewComponent.handleWebViewError",
-                                JSONObject().put("errorCode", errorCode).put("description", description ?: "")
+                                JSONObject()
+                                    .put("errorCode", error?.errorCode ?: -1)
+                                    .put("description", error?.description?.toString() ?: ""),
                             )
                         }
                     }

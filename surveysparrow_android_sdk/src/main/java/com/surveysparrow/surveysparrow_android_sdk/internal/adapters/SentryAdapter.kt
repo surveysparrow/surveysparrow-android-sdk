@@ -74,6 +74,7 @@ internal class SentryAdapter(private val domainName: String) {
                     put("severity", if (priority == "P0") "CRITICAL" else "HIGH")
                     put("errorType", "GENERAL")
                 })
+                normalizedEvent.optJSONObject("contexts")?.let { put("contexts", it) }
             }
 
             OutputStreamWriter(conn.outputStream).use { writer ->

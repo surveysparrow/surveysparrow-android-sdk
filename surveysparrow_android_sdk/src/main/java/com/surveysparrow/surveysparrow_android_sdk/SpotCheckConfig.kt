@@ -81,6 +81,15 @@ class SpotCheckConfig(
     var isChat by mutableStateOf(false)
     var screenName by mutableStateOf("")
 
+    var currentLanguage by mutableStateOf("")
+
+    val isRTLLanguage: Boolean
+        get() {
+            val normalized = currentLanguage.trim().lowercase(Locale.ROOT).replace('_', '-')
+            if (normalized.isEmpty()) return false
+            val code = normalized.substringBefore('-')
+            return code in RtlLanguageCodes
+        }
 
     init {
         if (traceId.isEmpty()) {
@@ -499,6 +508,7 @@ class SpotCheckConfig(
             }
             isSpotCheckButton = false
             isThankyouPageSubmission = false
+            currentLanguage = ""
         }
         else{
             isVisible = false
@@ -507,6 +517,7 @@ class SpotCheckConfig(
             isThankyouPageSubmission = false
             isInjected = false
             currentQuestionHeight = 0.0
+            currentLanguage =""
         }
 
 
@@ -731,5 +742,7 @@ class SpotCheckConfig(
         }
     }
 
-
+    private companion object {
+        val RtlLanguageCodes = setOf("ar", "he", "fa", "ps", "ur")
+    }
 }

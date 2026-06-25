@@ -188,13 +188,11 @@ class SpotCheckConfig(
                     response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
 
                     response.appearance?.let { setAppearance(it, screenName) }
-                    return true
                 } else {
                     Log.d(
                         "SPOT-CHECK",
                         "Error: Spots or Checks or Visitor or Recurrence Condition Failed"
                     )
-                    return false
                 }
             } else {
                 Log.d(
@@ -215,26 +213,23 @@ class SpotCheckConfig(
                                 this.afterDelay = delay
                             }
                             val customEvent = condition["customEvent"] as? Map<String, Any>
-                            customEventsSpotChecks = listOf(response.toMap())
+
                             if (!customEvent.isNullOrEmpty()) {
-                                return false
+                                customEventsSpotChecks = listOf(response.toMap())
+                            } else {
+                                this.triggerToken = response.triggerToken
+
+                                isChecksPassed = true
+                                response.spotCheckId?.also { spotCheckID = it.toDouble() }
+                                response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
+                                response.appearance?.let { setAppearance(it, screenName) }
                             }
                         }
-
-                        this.triggerToken = response.triggerToken
-
-                        isChecksPassed = true
-                        response.spotCheckId?.also { spotCheckID = it.toDouble() }
-                        response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
-                        response.appearance?.let { setAppearance(it, screenName) }
-                        return true
-
                     } else {
                         Log.d(
                             "SPOT-CHECK",
                             "Error: Checks Condition Failed"
                         )
-                        return false
                     }
                 }
 
@@ -305,11 +300,11 @@ class SpotCheckConfig(
                     "MultiShow Not Received"
                 )
             }
-            return false
+            return isSpotPassed || isChecksPassed
 
         } catch (e: Exception) {
             Log.e("Error @ sendRequestForTrackScreen", e.message, e);
-            return false;
+            return false
         }
     }
 

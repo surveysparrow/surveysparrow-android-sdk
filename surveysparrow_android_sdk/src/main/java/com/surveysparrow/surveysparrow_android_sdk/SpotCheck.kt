@@ -839,6 +839,6 @@ suspend fun trackEvent(screen: String, event: Map<String, Any>, config: SpotChec
         config.openSpot()
         Log.i("TrackEvent", config.isVisible.toString())
     } else {
-        Log.i("TrackScreen", "Failed")
+        Log.i("TrackEvent", "Failed")
     }
 }

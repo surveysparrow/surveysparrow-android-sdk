@@ -531,7 +531,7 @@ class SpotCheckConfig(
     }
 
     private fun getCurrentDate(): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
         return dateFormat.format(Date())
     }
 

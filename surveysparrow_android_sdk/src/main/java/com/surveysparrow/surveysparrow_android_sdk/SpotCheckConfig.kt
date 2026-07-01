@@ -81,6 +81,7 @@ class SpotCheckConfig(
     var isChat by mutableStateOf(false)
     var screenName by mutableStateOf("")
 
+    var isRTLLanguage by mutableStateOf(false)
 
     init {
         if (traceId.isEmpty()) {
@@ -494,6 +495,7 @@ class SpotCheckConfig(
             }
             isSpotCheckButton = false
             isThankyouPageSubmission = false
+            isRTLLanguage = false
         }
         else{
             isVisible = false
@@ -502,6 +504,7 @@ class SpotCheckConfig(
             isThankyouPageSubmission = false
             isInjected = false
             currentQuestionHeight = 0.0
+            isRTLLanguage = false
         }
 
 
@@ -725,6 +728,5 @@ class SpotCheckConfig(
             Log.e("SpotCheck", "Exception: ${e.message}", e)
         }
     }
-
 
 }

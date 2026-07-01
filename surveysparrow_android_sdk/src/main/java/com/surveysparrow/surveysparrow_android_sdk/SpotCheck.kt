@@ -171,8 +171,7 @@ private class SpotCheckEventHandler(private val config: SpotCheckConfig) {
                 gson.fromJson(message, SpotCheckData::class.java)
 
             if (spotCheckData.type == SpotCheckEvents.LANGUAGE_CHANGED) {
-                val lang = spotCheckData.data["language"] as? String ?: ""
-                config.currentLanguage = lang
+                config.isRTLLanguage = spotCheckData.data["isRtl"] as? Boolean ?: false
                 return
             }
 

@@ -115,14 +115,22 @@ private fun languageSelectorMarginScript(closeButtonEnabled: Boolean): String =
             (document.head || document.documentElement).appendChild(el);
           }
           el.textContent = '.surveysparrow-chat__wrapper .ss-language-selector--wrapper{margin-right:45px;}' +
-            '.ss-eui-wrapper--rtl .surveysparrow-chat__wrapper .ss-language-selector--wrapper{margin-left:45px;margin-right:0;}';
+            '.ss-eui-wrapper--rtl .surveysparrow-chat__wrapper .ss-language-selector--wrapper{margin-left:45px;margin-right:0;}' +
+            '.ss-eui-wrapper--rtl .ss-language-selector--wrapper.ss-language-selector--spotchecks{left:62px;right:auto;}' +
+            '.ss-eui-wrapper--rtl .ss-language-selector--wrapper.ss-language-selector--spotchecks-no-close-btn{left:24px;right:auto;}';
         })();
         """.trimIndent()
     } else {
         """
         (function() {
-          var el = document.getElementById('ss-sdk-lang-close-margin');
-          if (el) { el.textContent = ''; }
+          var id = 'ss-sdk-lang-close-margin';
+          var el = document.getElementById(id);
+          if (!el) {
+            el = document.createElement('style');
+            el.id = id;
+            (document.head || document.documentElement).appendChild(el);
+          }
+          el.textContent = '.ss-eui-wrapper--rtl .ss-language-selector--wrapper.ss-language-selector--spotchecks-no-close-btn{left:24px;right:auto;}';
         })();
         """.trimIndent()
     }

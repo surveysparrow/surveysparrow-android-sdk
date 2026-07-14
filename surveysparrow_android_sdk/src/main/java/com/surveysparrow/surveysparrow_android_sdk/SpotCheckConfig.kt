@@ -76,7 +76,6 @@ class SpotCheckConfig(
     var isSpotCheckButton by  mutableStateOf(false)
     var spotCheckButtonConfig by mutableStateOf<Map<String, Any>>(mapOf())
     var showSurveyContent by mutableStateOf(true)
-    var isThankyouPageSubmission by mutableStateOf(false)
     var appearance by mutableStateOf<Map<String, Any>>(mapOf())
     var isChat by mutableStateOf(false)
     var screenName by mutableStateOf("")
@@ -494,14 +493,12 @@ class SpotCheckConfig(
                 showSurveyContent = true
             }
             isSpotCheckButton = false
-            isThankyouPageSubmission = false
             isRTLLanguage = false
         }
         else{
             isVisible = false
             showSurveyContent = false
             isMounted = false
-            isThankyouPageSubmission = false
             isInjected = false
             currentQuestionHeight = 0.0
             isRTLLanguage = false

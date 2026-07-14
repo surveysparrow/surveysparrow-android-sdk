@@ -184,21 +184,15 @@ private class SpotCheckEventHandler(private val config: SpotCheckConfig) {
             }
 
             if (spotCheckData.type == SpotCheckEvents.THANK_YOU_PAGE_SUBMISSION) {
-                config.isThankyouPageSubmission = true
+                config.isCloseButtonEnabled = false
+                CoroutineScope(Dispatchers.Main).launch {
+                    delay(THANK_YOU_PAGE_DELAY)
+                    config.onClose()
+                }
                 CoroutineScope(Dispatchers.IO).launch {
                     config.spotCheckListener?.onSurveyResponse(
                         spotCheckData.data
                     )
-                }
-
-                if (config.spotChecksMode == "miniCard" && !config.isCloseButtonEnabled) {
-                    CoroutineScope(Dispatchers.Main).launch {
-                        delay(THANK_YOU_PAGE_DELAY)
-                        config.onClose()
-                    }
-                }
-                else{
-                    config.isCloseButtonEnabled = true
                 }
             }
             if (spotCheckData.type == SpotCheckEvents.SLIDE_IN_FRAME) {

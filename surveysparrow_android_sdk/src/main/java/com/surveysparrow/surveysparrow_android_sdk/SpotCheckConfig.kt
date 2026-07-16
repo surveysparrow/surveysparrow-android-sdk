@@ -76,11 +76,11 @@ class SpotCheckConfig(
     var isSpotCheckButton by  mutableStateOf(false)
     var spotCheckButtonConfig by mutableStateOf<Map<String, Any>>(mapOf())
     var showSurveyContent by mutableStateOf(true)
-    var isThankyouPageSubmission by mutableStateOf(false)
     var appearance by mutableStateOf<Map<String, Any>>(mapOf())
     var isChat by mutableStateOf(false)
     var screenName by mutableStateOf("")
 
+    var isRTLLanguage by mutableStateOf(false)
 
     init {
         if (traceId.isEmpty()) {
@@ -188,13 +188,11 @@ class SpotCheckConfig(
                     response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
 
                     response.appearance?.let { setAppearance(it, screenName) }
-                    return true
                 } else {
                     Log.d(
                         "SPOT-CHECK",
                         "Error: Spots or Checks or Visitor or Recurrence Condition Failed"
                     )
-                    return false
                 }
             } else {
                 Log.d(
@@ -215,26 +213,23 @@ class SpotCheckConfig(
                                 this.afterDelay = delay
                             }
                             val customEvent = condition["customEvent"] as? Map<String, Any>
-                            customEventsSpotChecks = listOf(response.toMap())
+
                             if (!customEvent.isNullOrEmpty()) {
-                                return false
+                                customEventsSpotChecks = listOf(response.toMap())
+                            } else {
+                                this.triggerToken = response.triggerToken
+
+                                isChecksPassed = true
+                                response.spotCheckId?.also { spotCheckID = it.toDouble() }
+                                response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
+                                response.appearance?.let { setAppearance(it, screenName) }
                             }
                         }
-
-                        this.triggerToken = response.triggerToken
-
-                        isChecksPassed = true
-                        response.spotCheckId?.also { spotCheckID = it.toDouble() }
-                        response.spotCheckContactId?.also { spotCheckContactID = it.toDouble() }
-                        response.appearance?.let { setAppearance(it, screenName) }
-                        return true
-
                     } else {
                         Log.d(
                             "SPOT-CHECK",
                             "Error: Checks Condition Failed"
                         )
-                        return false
                     }
                 }
 
@@ -305,11 +300,11 @@ class SpotCheckConfig(
                     "MultiShow Not Received"
                 )
             }
-            return false
+            return isSpotPassed || isChecksPassed
 
         } catch (e: Exception) {
             Log.e("Error @ sendRequestForTrackScreen", e.message, e);
-            return false;
+            return false
         }
     }
 
@@ -498,15 +493,15 @@ class SpotCheckConfig(
                 showSurveyContent = true
             }
             isSpotCheckButton = false
-            isThankyouPageSubmission = false
+            isRTLLanguage = false
         }
         else{
             isVisible = false
             showSurveyContent = false
             isMounted = false
-            isThankyouPageSubmission = false
             isInjected = false
             currentQuestionHeight = 0.0
+            isRTLLanguage = false
         }
 
 
@@ -536,7 +531,7 @@ class SpotCheckConfig(
     }
 
     private fun getCurrentDate(): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
         return dateFormat.format(Date())
     }
 
@@ -730,6 +725,5 @@ class SpotCheckConfig(
             Log.e("SpotCheck", "Exception: ${e.message}", e)
         }
     }
-
 
 }

@@ -96,10 +96,44 @@ private object SpotCheckEvents {
     const val PARTIAL_SUBMISSION = "partialSubmission"
     const val CLASSIC_LOADED = "classicLoadEvent"
     const val CHAT_LOADED = "chatLoadEvent"
+    const val LANGUAGE_CHANGED = "languageChanged"
 }
 
 private const val THANK_YOU_PAGE_DELAY = 4000L
 private const val TABLET_SCREEN_WIDTH_DP = 560
+
+
+private fun languageSelectorMarginScript(closeButtonEnabled: Boolean): String =
+    if (closeButtonEnabled) {
+        """
+        (function() {
+          var id = 'ss-sdk-lang-close-margin';
+          var el = document.getElementById(id);
+          if (!el) {
+            el = document.createElement('style');
+            el.id = id;
+            (document.head || document.documentElement).appendChild(el);
+          }
+          el.textContent = '.surveysparrow-chat__wrapper .ss-language-selector--wrapper{margin-right:45px;}' +
+            '.ss-eui-wrapper--rtl .surveysparrow-chat__wrapper .ss-language-selector--wrapper{margin-left:45px;margin-right:0;}' +
+            '.ss-eui-wrapper--rtl .ss-language-selector--wrapper.ss-language-selector--spotchecks{left:62px;right:auto;}' +
+            '.ss-eui-wrapper--rtl .ss-language-selector--wrapper.ss-language-selector--spotchecks-no-close-btn{left:24px;right:auto;}';
+        })();
+        """.trimIndent()
+    } else {
+        """
+        (function() {
+          var id = 'ss-sdk-lang-close-margin';
+          var el = document.getElementById(id);
+          if (!el) {
+            el = document.createElement('style');
+            el.id = id;
+            (document.head || document.documentElement).appendChild(el);
+          }
+          el.textContent = '.ss-eui-wrapper--rtl .ss-language-selector--wrapper.ss-language-selector--spotchecks-no-close-btn{left:24px;right:auto;}';
+        })();
+        """.trimIndent()
+    }
 
 private class SpotCheckState {
     var isCaptureImageActive by mutableStateOf(false)
@@ -144,22 +178,21 @@ private class SpotCheckEventHandler(private val config: SpotCheckConfig) {
             val spotCheckData: SpotCheckData =
                 gson.fromJson(message, SpotCheckData::class.java)
 
+            if (spotCheckData.type == SpotCheckEvents.LANGUAGE_CHANGED) {
+                config.isRTLLanguage = spotCheckData.data["isRtl"] as? Boolean ?: false
+                return
+            }
+
             if (spotCheckData.type == SpotCheckEvents.THANK_YOU_PAGE_SUBMISSION) {
-                config.isThankyouPageSubmission = true
+                config.isCloseButtonEnabled = false
+                CoroutineScope(Dispatchers.Main).launch {
+                    delay(THANK_YOU_PAGE_DELAY)
+                    config.onClose()
+                }
                 CoroutineScope(Dispatchers.IO).launch {
                     config.spotCheckListener?.onSurveyResponse(
                         spotCheckData.data
                     )
-                }
-
-                if (config.spotChecksMode == "miniCard" && !config.isCloseButtonEnabled) {
-                    CoroutineScope(Dispatchers.Main).launch {
-                        delay(THANK_YOU_PAGE_DELAY)
-                        config.onClose()
-                    }
-                }
-                else{
-                    config.isCloseButtonEnabled = true
                 }
             }
             if (spotCheckData.type == SpotCheckEvents.SLIDE_IN_FRAME) {
@@ -469,7 +502,7 @@ DisposableEffect(Unit) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.End
+                            horizontalArrangement = if (config.isRTLLanguage) Arrangement.Start else Arrangement.End
                         ) {
                             Box(
                                 modifier = Modifier
@@ -531,7 +564,7 @@ DisposableEffect(Unit) {
                                     }
                                 },
                                 modifier = Modifier
-                                    .align(Alignment.TopEnd)
+                                    .align(if (config.isRTLLanguage) Alignment.TopStart else Alignment.TopEnd)
                                     .padding(6.dp)
                             ) {
                                 Icon(
@@ -549,7 +582,7 @@ DisposableEffect(Unit) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.Start
+                            horizontalArrangement = if (config.isRTLLanguage) Arrangement.End else Arrangement.Start
                         ) {
                             Card(
                                 shape = RoundedCornerShape(24.dp),
@@ -619,7 +652,7 @@ DisposableEffect(Unit) {
                                 }
                             },
                             modifier = Modifier
-                                .align(Alignment.TopEnd)
+                                .align(if (config.isRTLLanguage) Alignment.TopStart else Alignment.TopEnd)
                                 .padding(6.dp)
                         ) {
                             Icon(
@@ -683,6 +716,7 @@ private fun SpotCheckWebView(
             context = context,
             url = url,
             isChat = isChat,
+            config = config,
             state = state,
             eventHandler = eventHandler,
             onPageFinished = onPageFinished,
@@ -696,12 +730,20 @@ private fun SpotCheckWebView(
         modifier = Modifier.fillMaxSize(),
         factory = { webView },
     )
+
+    LaunchedEffect(config.isCloseButtonEnabled) {
+        webView.evaluateJavascript(
+            languageSelectorMarginScript(config.isCloseButtonEnabled),
+            null
+        )
+    }
 }
 
 private fun createWebView(
     context: Context,
     url: String,
     isChat: Boolean,
+    config: SpotCheckConfig,
     state: SpotCheckState,
     eventHandler: SpotCheckEventHandler,
     onPageFinished: () -> Unit,
@@ -742,18 +784,15 @@ private fun createWebView(
                 view?.evaluateJavascript(
                     """
                         (function() {
-                            const styleTag = document.createElement("style");
-                            styleTag.innerHTML = `
-                                   .surveysparrow-chat__wrapper .ss-language-selector--wrapper { 
-                                        margin-right: 45px;                                             
-                                   }                                      
-                                   .close-btn-chat--spotchecks {
-                                        display: none !important;
-                                   }                                       
-                            `;
-                            document.body.appendChild(styleTag);
+                            var styleTag = document.createElement("style");
+                            styleTag.innerHTML = `.close-btn-chat--spotchecks { display: none !important; }`;
+                            (document.head || document.documentElement).appendChild(styleTag);
                         })();
-                        """.trimIndent(),
+                    """.trimIndent(),
+                    null
+                )
+                view?.evaluateJavascript(
+                    languageSelectorMarginScript(config.isCloseButtonEnabled),
                     null
                 )
             }
@@ -839,6 +878,6 @@ suspend fun trackEvent(screen: String, event: Map<String, Any>, config: SpotChec
         config.openSpot()
         Log.i("TrackEvent", config.isVisible.toString())
     } else {
-        Log.i("TrackScreen", "Failed")
+        Log.i("TrackEvent", "Failed")
     }
 }

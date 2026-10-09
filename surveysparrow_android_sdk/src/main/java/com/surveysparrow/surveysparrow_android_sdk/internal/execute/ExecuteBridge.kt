@@ -89,18 +89,52 @@ internal class ExecuteBridge(
         jsEngine.onResumeKeyboard = {
             keyboard.resumeDefaultKeyboardBehavior()
         }
+
+        jsEngine.onExecuteError = { functionName, error ->
+            if (!isSentryFunction(functionName)) {
+                Log.e("SpotCheckSDK", "[execute] $functionName: $error")
+                sentry.captureP1Error(error, "GENERAL", mapOf("action" to "execute:runtime", "functionName" to functionName))
+            }
+        }
+    }
+
+    // Reporting failures are not reported again (avoids loops).
+    private fun isSentryFunction(functionName: String) = functionName.startsWith("sentry.")
+
+    // Style getters run on every recomposition; they would push useful breadcrumbs out.
+    private fun isBreadcrumbWorthy(functionName: String) =
+        !isSentryFunction(functionName) && !STYLE_GETTER.containsMatchIn(functionName)
+
+    // Message type only; never survey content.
+    private fun describeParams(functionName: String, params: JSONObject?): Map<String, Any?> {
+        if (functionName != "webviewComponent.handleWebViewMessage") return emptyMap()
+        val data = params?.optJSONObject("event")?.optJSONObject("nativeEvent")?.optString("data") ?: return emptyMap()
+        if (data == "captureImage") return mapOf("messageType" to data)
+        return try {
+            mapOf("messageType" to JSONObject(data).optString("type"))
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    private companion object {
+        val STYLE_GETTER = Regex("\\.get\\w*Styles$")
     }
 
     suspend fun execute(functionName: String, params: JSONObject? = null): String? {
         if (!FunctionStore.isLoaded) return null
 
         try {
+            if (isBreadcrumbWorthy(functionName)) {
+                sentry.addBreadcrumb("execute", mapOf("functionName" to functionName) + describeParams(functionName, params))
+            }
             val paramsJson = (params ?: JSONObject()).toString()
             val stateJson = SpotCheckStore.getState().toString()
             return jsEngine.execute(functionName, paramsJson, stateJson)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            if (isSentryFunction(functionName)) return null
             sentry.captureP1Error(
                 e.message ?: "Unknown error",
                 "GENERAL",
@@ -110,35 +144,26 @@ internal class ExecuteBridge(
         }
     }
 
+    // Same value types as legacy Gson: numbers as Double, JSON null as null.
+    @Suppress("UNCHECKED_CAST")
     private fun jsonToMap(json: JSONObject): Map<String, Any> {
-        val map = mutableMapOf<String, Any>()
+        val map = mutableMapOf<String, Any?>()
         val keys = json.keys()
         while (keys.hasNext()) {
             val key = keys.next()
-            val value = json.get(key)
-            map[key] = when (value) {
-                is JSONObject -> jsonToMap(value)
-                is org.json.JSONArray -> jsonArrayToList(value)
-                JSONObject.NULL -> ""
-                else -> value
-            }
+            map[key] = gsonValue(json.get(key))
         }
-        return map
+        return map as Map<String, Any>
     }
 
-    private fun jsonArrayToList(array: org.json.JSONArray): List<Any> {
-        val list = mutableListOf<Any>()
-        for (i in 0 until array.length()) {
-            val value = array.get(i)
-            list.add(
-                when (value) {
-                    is JSONObject -> jsonToMap(value)
-                    is org.json.JSONArray -> jsonArrayToList(value)
-                    JSONObject.NULL -> ""
-                    else -> value
-                }
-            )
-        }
-        return list
+    private fun jsonArrayToList(array: org.json.JSONArray): List<Any?> =
+        (0 until array.length()).map { gsonValue(array.get(it)) }
+
+    private fun gsonValue(value: Any?): Any? = when (value) {
+        is JSONObject -> jsonToMap(value)
+        is org.json.JSONArray -> jsonArrayToList(value)
+        JSONObject.NULL -> null
+        is Number -> value.toDouble()
+        else -> value
     }
 }

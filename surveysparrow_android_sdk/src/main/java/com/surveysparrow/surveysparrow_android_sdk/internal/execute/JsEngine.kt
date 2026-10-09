@@ -12,6 +12,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
@@ -41,6 +43,8 @@ internal class JsEngine(
     var onCaptureError: ((String) -> Unit)? = null
     var onPauseKeyboard: (() -> Unit)? = null
     var onResumeKeyboard: (() -> Unit)? = null
+    var onWebViewInject: ((String, String) -> Unit)? = null
+    var onExecuteError: ((String, String) -> Unit)? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     suspend fun initialize() {
@@ -79,13 +83,16 @@ internal class JsEngine(
         deferred.invokeOnCompletion { pendingCalls.remove(callId) }
 
         withContext(Dispatchers.Main) {
-            val escapedParams = paramsJson.replace("\\", "\\\\").replace("'", "\\'")
-            val escapedState = stateJson.replace("\\", "\\\\").replace("'", "\\'")
-            val js = "_execute('$callId','$functionName','$escapedParams','$escapedState');"
+            // JSON is a valid JS literal, so params/state are passed as-is (no manual escaping).
+            val js = "_execute(${JSONObject.quote(callId)},${JSONObject.quote(functionName)},$paramsJson,$stateJson);"
             webView?.evaluateJavascript(js, null)
         }
 
-        return deferred.await()
+        val result = withTimeoutOrNull(EXECUTE_TIMEOUT_MS) { deferred.await() }
+        if (result == null && pendingCalls.remove(callId) != null) {
+            onExecuteError?.invoke(functionName, "Execution timed out")
+        }
+        return result
     }
 
     suspend fun evaluateExpr(expr: String, stateJson: String, stylesJson: String): String? {
@@ -106,8 +113,7 @@ internal class JsEngine(
 
     fun resolveCallback(callbackId: String, value: String) {
         Handler(Looper.getMainLooper()).post {
-            val escaped = value.replace("\\", "\\\\").replace("'", "\\'")
-            webView?.evaluateJavascript("_resolveCallback('$callbackId', '$escaped');", null)
+            webView?.evaluateJavascript("_resolveCallback(${JSONObject.quote(callbackId)}, ${JSONObject.quote(value)});", null)
         }
     }
 
@@ -176,8 +182,14 @@ internal class JsEngine(
         }
 
         @JavascriptInterface
-        fun onExecuteErrorBridge(callId: String, error: String) {
+        fun onExecuteErrorBridge(callId: String, functionName: String, error: String) {
             pendingCalls.remove(callId)?.complete(null)
+            onExecuteError?.invoke(functionName, error)
+        }
+
+        @JavascriptInterface
+        fun webviewInject(target: String, script: String) {
+            Handler(Looper.getMainLooper()).post { onWebViewInject?.invoke(target, script) }
         }
 
         @JavascriptInterface
@@ -210,20 +222,12 @@ internal class JsEngine(
                     } else ""
                     conn.disconnect()
 
-                    val escaped = responseBody
-                        .replace("\\", "\\\\")
-                        .replace("'", "\\'")
-                        .replace("\n", "\\n")
-                        .replace("\r", "\\r")
-
-                    val js = "_resolveFetch('$callbackId', $status, '$escaped');"
+                    val js = "_resolveFetch(${JSONObject.quote(callbackId)}, $status, ${JSONObject.quote(responseBody)});"
                     Handler(Looper.getMainLooper()).post {
                         webView?.evaluateJavascript(js, null)
                     }
                 } catch (e: Exception) {
-                    val errorMsg = (e.message ?: "Network error")
-                        .replace("'", "\\'")
-                    val js = "_rejectFetch('$callbackId', '${errorMsg}');"
+                    val js = "_rejectFetch(${JSONObject.quote(callbackId)}, ${JSONObject.quote(e.message ?: "Network error")});"
                     Handler(Looper.getMainLooper()).post {
                         webView?.evaluateJavascript(js, null)
                     }
@@ -244,7 +248,8 @@ internal class JsEngine(
     }
 
     companion object {
-        const val SDK_VERSION = "1.0.0-beta.1"
+        const val SDK_VERSION = "1.2.12-beta.1"
+        private const val EXECUTE_TIMEOUT_MS = 15_000L
 
         private val BOOTSTRAP_JS = """
             var _functions = {};
@@ -313,7 +318,7 @@ internal class JsEngine(
                 });
             };
 
-            function _execute(callId, functionName, paramsJson, stateJson) {
+            function _execute(callId, functionName, params, state) {
                 try {
                     var pathParts = functionName.split('.');
                     var funcString = _functions;
@@ -322,12 +327,12 @@ internal class JsEngine(
                         funcString = funcString[pathParts[i]];
                     }
                     if (!funcString || typeof funcString !== 'string') {
-                        NativeBridge.onExecuteErrorBridge(callId, 'Function ' + functionName + ' not found');
+                        NativeBridge.onExecuteErrorBridge(callId, functionName, 'Function ' + functionName + ' not found');
                         return;
                     }
                     var func = eval('(' + funcString + ')');
-                    var params = JSON.parse(paramsJson);
-                    var state = JSON.parse(stateJson);
+                    params = params || {};
+                    state = state || {};
                     var sdkVersion = '""" + SDK_VERSION + """';
                     params.sdkVersion = sdkVersion;
                     var payload = {
@@ -391,6 +396,11 @@ internal class JsEngine(
                             resumeDefaultKeyboardBehavior: function() {
                                 NativeBridge.resumeKeyboard();
                             }
+                        },
+                        webview: {
+                            inject: function(target, script) {
+                                NativeBridge.webviewInject(String(target), String(script));
+                            }
                         }
                     };
                     var result = func(payload);
@@ -398,13 +408,13 @@ internal class JsEngine(
                         result.then(function(r) {
                             NativeBridge.onExecuteResultBridge(callId, JSON.stringify(r === undefined ? null : r));
                         }).catch(function(e) {
-                            NativeBridge.onExecuteErrorBridge(callId, functionName + ' rejected: ' + (e.message || e));
+                            NativeBridge.onExecuteErrorBridge(callId, functionName, functionName + ' rejected: ' + (e.message || e));
                         });
                     } else {
                         NativeBridge.onExecuteResultBridge(callId, JSON.stringify(result === undefined ? null : result));
                     }
                 } catch(e) {
-                    NativeBridge.onExecuteErrorBridge(callId, functionName + ' threw: ' + (e.message || e));
+                    NativeBridge.onExecuteErrorBridge(callId, functionName, functionName + ' threw: ' + (e.message || e));
                 }
             }
 

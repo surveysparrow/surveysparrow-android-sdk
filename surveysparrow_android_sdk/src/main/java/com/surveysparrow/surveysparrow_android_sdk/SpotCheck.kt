@@ -60,7 +60,16 @@ private fun SpotCheckSafe(
     }
 
     DisposableEffect(config) {
+        val instanceId = sdk.onSpotCheckMounted()
         onDispose {
+            val shouldClose = sdk.onSpotCheckDisposed(instanceId)
+            // Rotation recreates the Activity: keep the spotcheck (iOS/Flutter/RN parity).
+            if (activity?.isChangingConfigurations == true) {
+                sdk.onActivityRecreating()
+                return@onDispose
+            }
+            // Newer screen already closed it before its own trackScreen.
+            if (!shouldClose) return@onDispose
             CoroutineScope(Dispatchers.Main).launch {
                 try {
                     config.handleNavigationChange()

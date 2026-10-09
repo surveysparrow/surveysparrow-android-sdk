@@ -42,12 +42,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.compose.remote:remote-creation-core:1.0.0-alpha07")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.activity:activity-compose:1.9.0")
@@ -55,6 +52,8 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.4.0")
     implementation("io.coil-kt:coil-svg:2.4.0")
     implementation("com.caverock:androidsvg-aar:1.4")
+    // Optional: used only when the host app ships Sentry (Expo pattern).
+    compileOnly("io.sentry:sentry-android-core:7.22.4")
 
 
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")

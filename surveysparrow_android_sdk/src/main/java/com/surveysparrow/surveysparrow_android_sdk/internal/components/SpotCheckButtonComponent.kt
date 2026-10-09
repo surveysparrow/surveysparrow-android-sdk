@@ -34,6 +34,11 @@ internal fun SpotCheckButtonRoot(executeBridge: ExecuteBridge) {
     val isSpotCheckButton = spotCheckDetails?.optBoolean("isSpotCheckButton", false) ?: false
     val showSurveyContent = spotCheckDetails?.optBoolean("showSurveyContent", true) ?: true
 
+    // Drop old styles when the button session ends, so the next one never shows stale styles.
+    LaunchedEffect(isSpotCheckButton) {
+        if (!isSpotCheckButton) styles = emptyMap()
+    }
+
     if (!isSpotCheckButton) return
 
     // Don't render button when survey is visible — they should never appear at same time

@@ -3,6 +3,8 @@ package com.surveysparrow.surveysparrow_android_sdk.internal.state
 import org.json.JSONObject
 
 internal object FunctionStore {
+    val NON_FUNCTION_KEYS = setOf("componentSchemas", "config")
+
     @Volatile
     var isLoaded: Boolean = false
         private set
@@ -10,33 +12,20 @@ internal object FunctionStore {
     private val functions = mutableMapOf<String, Any>()
 
     fun loadFromResponse(response: JSONObject) {
-        val topLevelKeys = listOf(
-            "initializeSpotcheckComponent", "trackScreen", "trackEvent",
-            "handleNavigationChange", "handleExitAnimationComplete"
-        )
-        for (key in topLevelKeys) {
-            response.optString(key, "").takeIf { it.isNotEmpty() }?.let {
-                functions[key] = it
-            }
-        }
-
-        val groups = mapOf(
-            "webviewComponent" to listOf("handleWebViewMessage", "handleWebViewError", "handleWebViewInjection", "classicWebViewRefCallback", "chatWebViewRefCallback"),
-            "closeButton" to listOf("handleCloseButton", "getCloseButtonStyles"),
-            "wrapper" to listOf("getWrapperStyles"),
-            "spotCheckButton" to listOf("handleSpotCheckButtonPress", "handleSideTabLayout", "getSpotCheckButtonStyles"),
-            "sentry" to listOf("processSentryError"),
-        )
-
-        for ((groupName, funcNames) in groups) {
-            val groupObj = response.optJSONObject(groupName) ?: continue
-            val groupMap = mutableMapOf<String, String>()
-            for (funcName in funcNames) {
-                groupObj.optString(funcName, "").takeIf { it.isNotEmpty() }?.let {
-                    groupMap[funcName] = it
+        // Load every function the backend sends (non-function keys skipped).
+        for (key in response.keys()) {
+            if (key in NON_FUNCTION_KEYS) continue
+            when (val value = response.opt(key)) {
+                is String -> if (value.isNotEmpty()) functions[key] = value
+                is JSONObject -> {
+                    val groupMap = mutableMapOf<String, String>()
+                    for (name in value.keys()) {
+                        val fn = value.opt(name)
+                        if (fn is String && fn.isNotEmpty()) groupMap[name] = fn
+                    }
+                    if (groupMap.isNotEmpty()) functions[key] = groupMap
                 }
             }
-            functions[groupName] = groupMap
         }
 
         isLoaded = true

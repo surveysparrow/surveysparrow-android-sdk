@@ -22,12 +22,20 @@ import com.surveysparrow.surveysparrow_android_sdk.internal.execute.JsEngine
 import com.surveysparrow.surveysparrow_android_sdk.internal.state.ComponentStore
 import com.surveysparrow.surveysparrow_android_sdk.internal.state.FunctionStore
 import com.surveysparrow.surveysparrow_android_sdk.internal.state.SpotCheckStore
+import com.surveysparrow.surveysparrow_android_sdk.internal.builder.GenericActions
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.sync.withLock
 import java.util.TimeZone
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 internal class SpotCheckSdk private constructor() {
 
@@ -40,9 +48,20 @@ internal class SpotCheckSdk private constructor() {
     private lateinit var sentry: SentryAdapter
     private lateinit var keyboard: KeyboardAdapter
 
+    @Volatile
     private var isInitialized = false
+    @Volatile
     private var initDeferred = CompletableDeferred<Unit>()
+    // True when the last init attempt failed and no new one has started.
+    @Volatile
+    private var initFailed = false
+    private val initMutex = kotlinx.coroutines.sync.Mutex()
     private var domainName: String = ""
+
+    /** Backend page script from init config; null keeps the built-in one. */
+    @Volatile
+    var remoteWebViewScript: String? = null
+        private set
     private var targetToken: String = ""
 
     suspend fun initialize(
@@ -54,23 +73,49 @@ internal class SpotCheckSdk private constructor() {
         customProperties: Map<String, Any>,
         preferences: SharedPreferences?,
         spotCheckListener: SsSpotcheckListener?,
-    ) {
-        if (isInitialized) return
+    ) = initMutex.withLock {
+        if (isInitialized) {
+            if (this.domainName == domainName && this.targetToken == targetToken) {
+                // Legacy: each config had its own details, listener and traceId.
+                listener.listener = spotCheckListener
+                storage.preferences = preferences
+                SpotCheckStore.dispatch(JSONObject().put("params", JSONObject().apply {
+                    put("userDetails", JSONObject(userDetails))
+                    put("variables", JSONObject(variables))
+                    put("customProperties", JSONObject(customProperties))
+                    // Keep the open survey's traceId (config recreated on rotation).
+                    if (!isSurveyOpen()) put("traceId", "")
+                }))
+                return@withLock
+            }
+            // Different account config: start over.
+            destroy()
+        }
 
+        initFailed = false
         try {
             this.domainName = domainName
             this.targetToken = targetToken
 
+            // Previous failed attempt's Sentry hub (its report has already gone out).
+            if (::sentry.isInitialized) sentry.close()
             storage = StorageAdapter(preferences)
             listener = ListenerAdapter().apply { this.listener = spotCheckListener }
-            sentry = SentryAdapter(domainName)
+            sentry = SentryAdapter(domainName, context.applicationContext)
             keyboard = KeyboardAdapter()
 
-            jsEngine = JsEngine(context, domainName)
+            jsEngine = JsEngine(context.applicationContext, domainName)
             jsEngine.initialize()
 
             executeBridge = ExecuteBridge(jsEngine, storage, listener, sentry, keyboard)
+            jsEngine.onWebViewInject = { target, script ->
+                if (target == "chat") WebViewRefHolder.evaluateJsOnChat(script)
+                else WebViewRefHolder.evaluateJsOnClassic(script)
+            }
             sentry.executeBridge = executeBridge::execute as suspend (String, JSONObject?) -> String?
+            GenericActions.runner = { fn, params ->
+                CoroutineScope(Dispatchers.IO).launch { executeBridge.execute(fn, params) }
+            }
 
             registerDefaultComponents()
 
@@ -86,8 +131,9 @@ internal class SpotCheckSdk private constructor() {
                 put("customProperties", JSONObject(customProperties))
                 put("visitor", buildVisitorInfo())
                 put("framework", "android")
+                put("sdkVersion", JsEngine.SDK_VERSION)
                 put("userAgent", buildUserAgent())
-                put("traceId", storage.loadData(false))
+                put("device", buildDeviceFacts())
             }
             SpotCheckStore.dispatch(JSONObject().apply {
                 put("params", initParams)
@@ -102,6 +148,9 @@ internal class SpotCheckSdk private constructor() {
             }
 
             FunctionStore.loadFromResponse(response)
+            remoteWebViewScript = response.optJSONObject("config")
+                ?.optString("webViewScript", "")
+                ?.takeIf { it.isNotBlank() }
 
             val functionsJson = buildFunctionsJsonForEngine(response)
             jsEngine.storeFunctions(functionsJson)
@@ -110,30 +159,115 @@ internal class SpotCheckSdk private constructor() {
 
             isInitialized = true
             initDeferred.complete(Unit)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Cancelled (rotation/navigation): waiters keep waiting for the next initialize().
+            releaseFailedInit()
+            throw e
         } catch (e: Exception) {
-            if (!initDeferred.isCompleted) {
-                initDeferred.completeExceptionally(e)
+            if (::sentry.isInitialized) {
+                sentry.captureP0Error(e.message ?: "Initialization failed", "SPOTCHECK_INITIALIZATION", mapOf("action" to "initialize"), e)
             }
+            failInit(e)
             throw e
         }
     }
 
-    private suspend fun awaitInit() {
-        if (isInitialized) return
-        initDeferred.await()
+    // Frees the hidden WebView, fails waiters and lets the next initialize() retry.
+    private fun failInit(e: Exception) {
+        releaseFailedInit()
+        initFailed = true
+        if (!initDeferred.isCompleted) {
+            initDeferred.completeExceptionally(e)
+        }
+        initDeferred = CompletableDeferred()
     }
+
+    private fun releaseFailedInit() {
+        if (::jsEngine.isInitialized) jsEngine.destroy()
+        GenericActions.runner = null
+    }
+
+    /** False when initialization failed; callers skip instead of crashing the host app. */
+    private suspend fun awaitInit(): Boolean {
+        if (isInitialized) return true
+        // Read the deferred before the flag so a failure in between is not missed.
+        val deferred = initDeferred
+        if (initFailed) return false
+        return try {
+            deferred.await()
+            true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    // Per-screen SpotCheck: the next screen mounts before the previous one is disposed.
+    private val liveSpotChecks = AtomicInteger(0)
+    private val latestSpotCheckId = AtomicLong(0)
+    private val pendingNavigationClose = AtomicBoolean(false)
+
+    fun onSpotCheckMounted(): Long {
+        if (liveSpotChecks.getAndIncrement() > 0) pendingNavigationClose.set(true)
+        return latestSpotCheckId.incrementAndGet()
+    }
+
+    // True when this dispose must run the navigation close itself.
+    fun onSpotCheckDisposed(id: Long): Boolean {
+        val remaining = liveSpotChecks.decrementAndGet()
+        if (id == latestSpotCheckId.get() || remaining <= 0) {
+            pendingNavigationClose.set(false)
+            return true
+        }
+        // A newer screen is up: close only if its track call hasn't already done it.
+        return pendingNavigationClose.getAndSet(false)
+    }
+
+    // Close the previous screen's spotcheck before the new screen's call (never after it).
+    private suspend fun runPendingNavigationClose() {
+        if (pendingNavigationClose.getAndSet(false)) handleNavigationChange()
+    }
+
+    // Screen whose open survey must survive an Activity recreation (rotation).
+    @Volatile
+    private var rotationKeepScreen: String? = null
 
     fun setActivity(activity: Activity?) {
         if (::keyboard.isInitialized) {
-            keyboard.setActivity(activity)
+            val changed = keyboard.setActivity(activity)
+            // New window after rotation: re-apply the survey keyboard mode.
+            if (changed && isSurveyOpen()) keyboard.pauseDefaultKeyboardBehavior()
         }
+    }
+
+    private fun isSurveyOpen(): Boolean {
+        val details = SpotCheckStore.state.value.optJSONObject("SpotCheckState")
+            ?.optJSONObject("spotCheckDetails") ?: return false
+        return details.optBoolean("isVisible", false) && details.optBoolean("showSurveyContent", false)
+    }
+
+    // Activity recreated (rotation): keep the spotcheck instead of the navigation close.
+    fun onActivityRecreating() {
+        if (!isInitialized || !isSurveyOpen()) return
+        rotationKeepScreen = SpotCheckStore.state.value.optJSONObject("SpotCheckState")
+            ?.optJSONObject("currentSpotcheck")?.optString("screenName", "")
+            ?.takeIf { it.isNotEmpty() }
     }
 
     suspend fun trackScreen(
         screenName: String,
         options: Map<String, Any> = emptyMap(),
     ) {
-        awaitInit()
+        if (!awaitInit()) return
+        runPendingNavigationClose()
+        val keepScreen = rotationKeepScreen
+        if (keepScreen != null) {
+            // The app re-tracks its screen after rotation; keep the open survey.
+            if (keepScreen == screenName && isSurveyOpen()) return
+            rotationKeepScreen = null
+        }
+        sentry.addBreadcrumb("trackScreen", mapOf("screen" to screenName))
         val params = JSONObject().apply {
             put("screen", screenName)
             if (options.isNotEmpty()) {
@@ -144,7 +278,9 @@ internal class SpotCheckSdk private constructor() {
     }
 
     suspend fun trackEvent(screenName: String, event: Map<String, Any>) {
-        awaitInit()
+        if (!awaitInit()) return
+        runPendingNavigationClose()
+        sentry.addBreadcrumb("trackEvent", mapOf("screen" to screenName, "event" to event.keys.joinToString(",")))
         executeBridge.execute(
             "trackEvent",
             JSONObject().apply {
@@ -154,27 +290,17 @@ internal class SpotCheckSdk private constructor() {
         )
     }
 
-    fun injectUnmountApp() {
-        if (!isInitialized) return
-        val webViewDetails = SpotCheckStore.getState()
-            .optJSONObject("SpotCheckState")
-            ?.optJSONObject("webViewDetails")
-        val isChat = webViewDetails?.opt("isCurrentSpotcheckChat")?.let {
-            it != org.json.JSONObject.NULL && it == true
-        } ?: false
-        WebViewRefHolder.injectUnmountApp(isChat)
-    }
-
     suspend fun handleNavigationChange() {
-        awaitInit()
-        injectUnmountApp()
+        if (!awaitInit()) return
+        rotationKeepScreen = null
         executeBridge.execute("handleNavigationChange")
     }
 
+    // Public close: same as legacy (no onCloseButtonTap).
     suspend fun closeSpotCheck() {
-        awaitInit()
-        injectUnmountApp()
-        executeBridge.execute("closeButton.handleCloseButton")
+        if (!awaitInit()) return
+        rotationKeepScreen = null
+        executeBridge.execute("handleNavigationChange", JSONObject().put("reason", "close"))
     }
 
     fun destroy() {
@@ -187,6 +313,14 @@ internal class SpotCheckSdk private constructor() {
         if (::jsEngine.isInitialized) {
             jsEngine.destroy()
         }
+        if (::sentry.isInitialized) {
+            sentry.close()
+        }
+        rotationKeepScreen = null
+        GenericActions.runner = null
+        // Same-domain WebViews must reload for the new account.
+        WebViewRefHolder.classicWebView = null
+        WebViewRefHolder.chatWebView = null
         SpotCheckStore.reset()
         FunctionStore.reset()
         ComponentStore.reset()
@@ -202,8 +336,21 @@ internal class SpotCheckSdk private constructor() {
                 put("width", dm.widthPixels)
                 put("height", dm.heightPixels)
             })
-            put("currentDate", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
+            put("currentDate", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()))
             put("timezone", TimeZone.getDefault().id)
+        }
+    }
+
+    // Raw device facts; the backend builds the User-Agent from these.
+    private fun buildDeviceFacts(): JSONObject {
+        val dm = Resources.getSystem().displayMetrics
+        val dpr = dm.density.toInt()
+        val isTablet = (dpr < 2 && (dm.widthPixels >= 1000 || dm.heightPixels >= 1000)) ||
+            (dpr == 2 && (dm.widthPixels >= 1920 || dm.heightPixels >= 1920))
+        return JSONObject().apply {
+            put("os", "android")
+            put("osVersion", Build.VERSION.RELEASE)
+            put("isTablet", isTablet)
         }
     }
 
@@ -219,35 +366,23 @@ internal class SpotCheckSdk private constructor() {
         return "Mozilla/5.0 (Linux; Android ${Build.VERSION.RELEASE}; $deviceType) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Mobile Safari/537.36"
     }
 
+    // Same rule as FunctionStore: every string, or object of strings, except non-function keys.
     private fun buildFunctionsJsonForEngine(response: JSONObject): String {
         val functions = JSONObject()
-
-        val topLevel = listOf("initializeSpotcheckComponent", "trackScreen", "trackEvent", "handleNavigationChange", "handleExitAnimationComplete")
-        for (name in topLevel) {
-            response.optString(name, "").takeIf { it.isNotEmpty() }?.let {
-                functions.put(name, it)
-            }
-        }
-
-        val groups = mapOf(
-            "webviewComponent" to listOf("handleWebViewMessage", "handleWebViewError", "handleWebViewInjection", "classicWebViewRefCallback", "chatWebViewRefCallback"),
-            "closeButton" to listOf("handleCloseButton", "getCloseButtonStyles"),
-            "wrapper" to listOf("getWrapperStyles"),
-            "spotCheckButton" to listOf("handleSpotCheckButtonPress", "handleSideTabLayout", "getSpotCheckButtonStyles"),
-            "sentry" to listOf("processSentryError"),
-        )
-
-        for ((groupName, funcNames) in groups) {
-            val groupObj = response.optJSONObject(groupName) ?: continue
-            val jsGroup = JSONObject()
-            for (funcName in funcNames) {
-                groupObj.optString(funcName, "").takeIf { it.isNotEmpty() }?.let {
-                    jsGroup.put(funcName, it)
+        for (key in response.keys()) {
+            if (key in FunctionStore.NON_FUNCTION_KEYS) continue
+            when (val value = response.opt(key)) {
+                is String -> if (value.isNotEmpty()) functions.put(key, value)
+                is JSONObject -> {
+                    val jsGroup = JSONObject()
+                    for (name in value.keys()) {
+                        val fn = value.opt(name)
+                        if (fn is String && fn.isNotEmpty()) jsGroup.put(name, fn)
+                    }
+                    if (jsGroup.length() > 0) functions.put(key, jsGroup)
                 }
             }
-            functions.put(groupName, jsGroup)
         }
-
         return functions.toString()
     }
 

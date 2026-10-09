@@ -2,8 +2,13 @@ package com.surveysparrow.surveysparrow_android_sdk.internal.builder
 
 import android.graphics.Color.parseColor
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,19 +43,26 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.platform.LocalContext
+import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.decode.SvgDecoder
 import com.caverock.androidsvg.SVG
 import android.graphics.drawable.PictureDrawable
 import android.widget.ImageView
+import android.graphics.Typeface
 import org.json.JSONObject
 
 /**
@@ -84,7 +96,14 @@ ComponentRegistry.register("Box") { props, children ->
 
     val flexDirection = style["flexDirection"] as? String
     val gap = (style["gap"] as? Number)?.toFloat() ?: 0f
-    val contentAlignment = resolveAlignment(style["alignment"] as? String)
+    val justifyContent = style["justifyContent"] as? String
+    val alignItems = style["alignItems"] as? String
+    // Flex keys only steer a plain Box when no explicit alignment is given.
+    val contentAlignment = if (style["alignment"] == null && (justifyContent != null || alignItems != null)) {
+        flexBoxAlignment(justifyContent, alignItems)
+    } else {
+        resolveAlignment(style["alignment"] as? String)
+    }
 
     var modifier = animModifier.then(applyStyle(style))
 
@@ -100,12 +119,15 @@ ComponentRegistry.register("Box") { props, children ->
     var finalModifier = modifier
 
     if (onPress != null) {
-        finalModifier = finalModifier.clickable(
-            indication = null,
-            interactionSource = remember { MutableInteractionSource() }
-        ) {
-            onPress.invoke(null)
-        }
+        // Uniform tap feedback on every platform: dim while pressed.
+        val interaction = remember { MutableInteractionSource() }
+        val pressed by interaction.collectIsPressedAsState()
+        val pressedOpacity = (props["pressedOpacity"] as? Number)?.toFloat() ?: 0.6f
+        finalModifier = finalModifier
+            .alpha(if (pressed) pressedOpacity else 1f)
+            .clickable(indication = null, interactionSource = interaction) {
+                onPress.invoke(null)
+            }
     }
 
     Box(
@@ -115,12 +137,12 @@ ComponentRegistry.register("Box") { props, children ->
         when (flexDirection) {
             "row" -> {
                 Row(
-                    horizontalArrangement = if (gap > 0f) {
+                    horizontalArrangement = flexHorizontalArrangement(justifyContent, gap) ?: if (gap > 0f) {
                         Arrangement.spacedBy(gap.dp)
                     } else {
                         Arrangement.Start
                     },
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = flexVerticalAlignment(alignItems) ?: Alignment.CenterVertically,
                 ) {
                     children()
                 }
@@ -128,8 +150,8 @@ ComponentRegistry.register("Box") { props, children ->
 
             "column" -> {
                 Column(
-                    verticalArrangement = Arrangement.Top,
-                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = flexVerticalArrangement(justifyContent, 0f) ?: Arrangement.Top,
+                    horizontalAlignment = flexHorizontalAlignment(alignItems) ?: Alignment.Start,
                 ) {
                     children()
                 }
@@ -147,13 +169,13 @@ ComponentRegistry.register("Box") { props, children ->
         val animModifier = props["animationModifier"] as? Modifier ?: Modifier
         Column(
             modifier = animModifier.then(applyStyle(style)),
-            verticalArrangement = when (style["alignment"]) {
+            verticalArrangement = flexVerticalArrangement(style["justifyContent"] as? String, 0f) ?: when (style["alignment"]) {
                 "topCenter" -> Arrangement.Top
                 "bottomCenter" -> Arrangement.Bottom
                 "center" -> Arrangement.Center
                 else -> Arrangement.Top
             },
-            horizontalAlignment = when (style["alignment"]) {
+            horizontalAlignment = flexHorizontalAlignment(style["alignItems"] as? String) ?: when (style["alignment"]) {
                 "topCenter", "bottomCenter", "center" -> Alignment.CenterHorizontally
                 "topEnd", "bottomEnd", "centerEnd" -> Alignment.End
                 else -> Alignment.Start
@@ -168,14 +190,14 @@ ComponentRegistry.register("Box") { props, children ->
         val animModifier = props["animationModifier"] as? Modifier ?: Modifier
         Row(
             modifier = animModifier.then(applyStyle(style)),
-            horizontalArrangement = when (style["horizontalArrangement"]) {
+            horizontalArrangement = flexHorizontalArrangement(style["justifyContent"] as? String, 0f) ?: when (style["horizontalArrangement"]) {
                 "start" -> Arrangement.Start
                 "end" -> Arrangement.End
                 "center" -> Arrangement.Center
                 "spaceBetween" -> Arrangement.SpaceBetween
                 else -> Arrangement.Start
             },
-            verticalAlignment = when (style["verticalAlignment"]) {
+            verticalAlignment = flexVerticalAlignment(style["alignItems"] as? String) ?: when (style["verticalAlignment"]) {
                 "center" -> Alignment.CenterVertically
                 "top" -> Alignment.Top
                 "bottom" -> Alignment.Bottom
@@ -190,9 +212,11 @@ ComponentRegistry.register("Box") { props, children ->
         val style = extractStyle(props)
         val animModifier = props["animationModifier"] as? Modifier ?: Modifier
         val contentAlignment = resolveAlignment(style["alignment"] as? String)
+        val blur = (style["backdropBlur"] as? Number)?.toFloat() ?: 0f
         Box(
             modifier = animModifier
                 .fillMaxSize()
+                .backdropBlur(blur)
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .then(applyStyle(style)),
             contentAlignment = contentAlignment,
@@ -220,13 +244,30 @@ ComponentRegistry.register("Box") { props, children ->
         val content = props["content"] as? String ?: ""
         val fontSize = (style["fontSize"] as? Number)?.toInt() ?: 14
         val color = parseColorSafe(style["color"] as? String ?: "#000000")
-        val fontWeight = if (style["fontWeight"] == "bold") FontWeight.Bold else FontWeight.Normal
+        val weight = style["fontWeight"]
+        val fontWeight = if (weight == "bold" || ((weight as? Number)?.toInt() ?: weight?.toString()?.toIntOrNull() ?: 0) >= 600) FontWeight.Bold else FontWeight.Normal
+        val lineHeight = (style["lineHeight"] as? Number)?.toFloat()
+        val letterSpacing = (style["letterSpacing"] as? Number)?.toFloat()
+        val textAlign = when (style["textAlign"]) {
+            "center" -> TextAlign.Center
+            "right", "end" -> TextAlign.End
+            "left", "start" -> TextAlign.Start
+            else -> null
+        }
+        val fontFamilyName = style["fontFamily"] as? String
+        val fontFamily = remember(fontFamilyName) { resolveFontFamily(fontFamilyName) }
+        val fontStyle = if (style["fontStyle"] == "italic") FontStyle.Italic else null
 
         Text(
             text = content,
             color = color,
             fontSize = fontSize.sp,
             fontWeight = fontWeight,
+            fontFamily = fontFamily,
+            fontStyle = fontStyle,
+            lineHeight = lineHeight?.sp ?: TextUnit.Unspecified,
+            letterSpacing = letterSpacing?.sp ?: TextUnit.Unspecified,
+            textAlign = textAlign,
         )
     }
 
@@ -237,6 +278,8 @@ ComponentRegistry.register("Box") { props, children ->
         val w = (style["width"] as? Number)?.toInt() ?: 48
         val h = (style["height"] as? Number)?.toInt() ?: w
         val borderRadius = (style["borderRadius"] as? Number)?.toInt() ?: 0
+        val elevation = (style["elevation"] as? Number)?.toFloat() ?: 0f
+        val shape = if (borderRadius > 100 || borderRadius * 2 >= minOf(w, h)) CircleShape else RoundedCornerShape(borderRadius.dp)
 
         AsyncImage(
             model = uri,
@@ -244,7 +287,9 @@ ComponentRegistry.register("Box") { props, children ->
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(w.dp, h.dp)
-                .clip(if (borderRadius > 100) CircleShape else RoundedCornerShape(borderRadius.dp))
+                // Legacy avatar sat in a Card with 4dp elevation.
+                .then(if (elevation > 0f) Modifier.shadow(elevation.dp, shape) else Modifier)
+                .clip(shape)
         )
     }
 
@@ -255,10 +300,17 @@ ComponentRegistry.register("Box") { props, children ->
         when {
             xml.isEmpty() -> { /* empty - render nothing */ }
             xml.startsWith("http") -> {
+                // Legacy: icon URLs are SVG, so add the SVG decoder.
+                val context = LocalContext.current
+                // Backend sends contentScale "crop" + clipCircle for button icons; default stays Fit.
+                val crop = props["contentScale"] == "crop"
+                val clipCircle = props["clipCircle"] == true
                 AsyncImage(
                     model = xml,
+                    imageLoader = SvgImageLoader.get(context),
                     contentDescription = null,
-                    modifier = Modifier.size(w.dp, h.dp)
+                    contentScale = if (crop) ContentScale.Crop else ContentScale.Fit,
+                    modifier = Modifier.size(w.dp, h.dp).then(if (clipCircle) Modifier.clip(CircleShape) else Modifier)
                 )
             }
             else -> {
@@ -288,6 +340,75 @@ ComponentRegistry.register("Box") { props, children ->
 @Suppress("UNCHECKED_CAST")
 private fun extractStyle(props: Map<String, Any?>): Map<String, Any?> {
     return (props["style"] as? Map<String, Any?>) ?: emptyMap()
+}
+
+// Unknown names fall back to the default font; never throws.
+private fun resolveFontFamily(name: String?): FontFamily? {
+    if (name.isNullOrBlank()) return null
+    return when (name.trim().lowercase()) {
+        "serif" -> FontFamily.Serif
+        "sans-serif", "sans_serif", "system" -> FontFamily.SansSerif
+        "monospace" -> FontFamily.Monospace
+        "cursive" -> FontFamily.Cursive
+        else -> try {
+            FontFamily(Typeface.create(name.trim(), Typeface.NORMAL))
+        } catch (_: Throwable) {
+            null
+        }
+    }
+}
+
+// RN justifyContent on a row's main axis; null when absent or unknown.
+private fun flexHorizontalArrangement(justify: String?, gap: Float): Arrangement.Horizontal? = when (justify) {
+    "flex-start" -> if (gap > 0f) Arrangement.spacedBy(gap.dp, Alignment.Start) else Arrangement.Start
+    "center" -> if (gap > 0f) Arrangement.spacedBy(gap.dp, Alignment.CenterHorizontally) else Arrangement.Center
+    "flex-end" -> if (gap > 0f) Arrangement.spacedBy(gap.dp, Alignment.End) else Arrangement.End
+    "space-between" -> Arrangement.SpaceBetween
+    "space-around" -> Arrangement.SpaceAround
+    "space-evenly" -> Arrangement.SpaceEvenly
+    else -> null
+}
+
+// RN justifyContent on a column's main axis; null when absent or unknown.
+private fun flexVerticalArrangement(justify: String?, gap: Float): Arrangement.Vertical? = when (justify) {
+    "flex-start" -> if (gap > 0f) Arrangement.spacedBy(gap.dp, Alignment.Top) else Arrangement.Top
+    "center" -> if (gap > 0f) Arrangement.spacedBy(gap.dp, Alignment.CenterVertically) else Arrangement.Center
+    "flex-end" -> if (gap > 0f) Arrangement.spacedBy(gap.dp, Alignment.Bottom) else Arrangement.Bottom
+    "space-between" -> Arrangement.SpaceBetween
+    "space-around" -> Arrangement.SpaceAround
+    "space-evenly" -> Arrangement.SpaceEvenly
+    else -> null
+}
+
+// RN alignItems on a column's cross axis; stretch maps to start.
+private fun flexHorizontalAlignment(align: String?): Alignment.Horizontal? = when (align) {
+    "flex-start", "stretch" -> Alignment.Start
+    "center" -> Alignment.CenterHorizontally
+    "flex-end" -> Alignment.End
+    else -> null
+}
+
+// RN alignItems on a row's cross axis; stretch maps to top.
+private fun flexVerticalAlignment(align: String?): Alignment.Vertical? = when (align) {
+    "flex-start", "stretch" -> Alignment.Top
+    "center" -> Alignment.CenterVertically
+    "flex-end" -> Alignment.Bottom
+    else -> null
+}
+
+// Plain Box (RN column): justifyContent is vertical, alignItems horizontal.
+private fun flexBoxAlignment(justify: String?, align: String?): Alignment {
+    val v = when (justify) {
+        "center", "space-around", "space-evenly" -> 0f
+        "flex-end" -> 1f
+        else -> -1f
+    }
+    val h = when (align) {
+        "center" -> 0f
+        "flex-end" -> 1f
+        else -> -1f
+    }
+    return androidx.compose.ui.BiasAlignment(h, v)
 }
 
 private fun resolveAlignment(alignment: String?): Alignment {
@@ -325,6 +446,15 @@ internal fun applyStyle(style: Map<String, Any?>): Modifier {
     val paddingTop = (style["paddingTop"] as? Number)?.toFloat()
     val marginVertical = (style["marginVertical"] as? Number)?.toFloat()
     val marginHorizontal = (style["marginHorizontal"] as? Number)?.toFloat()
+    val paddingLeft = (style["paddingLeft"] as? Number)?.toFloat()
+    val paddingRight = (style["paddingRight"] as? Number)?.toFloat()
+    val marginTop = (style["marginTop"] as? Number)?.toFloat()
+    val marginBottom = (style["marginBottom"] as? Number)?.toFloat()
+    val marginLeft = (style["marginLeft"] as? Number)?.toFloat()
+    val marginRight = (style["marginRight"] as? Number)?.toFloat()
+    val scale = (style["scale"] as? Number)?.toFloat()
+    val borderWidth = (style["borderWidth"] as? Number)?.toFloat()
+    val borderColor = style["borderColor"] as? String
     val rotation = (style["rotation"] as? Number)?.toFloat()
     val translateX = (style["translateX"] as? Number)?.toFloat()
     val translateY = (style["translateY"] as? Number)?.toFloat()
@@ -349,6 +479,15 @@ internal fun applyStyle(style: Map<String, Any?>): Modifier {
     // made square close buttons (e.g. mini-card) non-square / not a true circle.
     if (marginVertical != null) modifier = modifier.padding(vertical = marginVertical.dp)
     if (marginHorizontal != null) modifier = modifier.padding(horizontal = marginHorizontal.dp)
+    // Per-side outer margin; left/right follow layout direction like RN.
+    if (marginTop != null || marginBottom != null || marginLeft != null || marginRight != null) {
+        modifier = modifier.padding(
+            start = (marginLeft ?: 0f).coerceAtLeast(0f).dp,
+            top = (marginTop ?: 0f).coerceAtLeast(0f).dp,
+            end = (marginRight ?: 0f).coerceAtLeast(0f).dp,
+            bottom = (marginBottom ?: 0f).coerceAtLeast(0f).dp,
+        )
+    }
 
     val squareSide = if (
         width != null && height != null &&
@@ -453,13 +592,23 @@ internal fun applyStyle(style: Map<String, Any?>): Modifier {
         modifier = modifier.graphicsLayer { rotationZ = rotation }
     }
 
+    // Uniform scale around the centre, like RN transform scale.
+    if (scale != null && scale.isFinite()) {
+        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }
+    }
+
     val shape = when {
         shadowShape == "circle" -> CircleShape
         else -> buildShape(borderRadius, borderRadiusTopLeft, borderRadiusTopRight, borderRadiusBottomLeft, borderRadiusBottomRight)
     }
 
     if (elevation != null && elevation > 0 && shape != null) {
-        modifier = modifier.shadow(elevation.dp, shape)
+        val shadowColor = (style["shadowColor"] as? String)?.let { parseColorSafe(it) }
+        modifier = if (shadowColor != null) {
+            modifier.shadow(elevation.dp, shape, ambientColor = shadowColor, spotColor = shadowColor)
+        } else {
+            modifier.shadow(elevation.dp, shape)
+        }
     }
 
     // Clip before background so the fill is constrained to shape (circle, rounded rect, etc.).
@@ -476,6 +625,11 @@ internal fun applyStyle(style: Map<String, Any?>): Modifier {
         }
     }
 
+    // Border follows the same shape as clip/background.
+    if (borderWidth != null && borderWidth > 0f) {
+        modifier = modifier.border(borderWidth.dp, parseColorSafe(borderColor ?: "#000000"), shape ?: RectangleShape)
+    }
+
     if (padding != null) modifier = modifier.padding(padding.dp)
     if (paddingVertical != null || paddingHorizontal != null) {
         modifier = modifier.padding(
@@ -485,6 +639,8 @@ internal fun applyStyle(style: Map<String, Any?>): Modifier {
     }
     if (paddingBottom != null) modifier = modifier.padding(bottom = paddingBottom.dp)
     if (paddingTop != null) modifier = modifier.padding(top = paddingTop.dp)
+    if (paddingLeft != null) modifier = modifier.padding(start = paddingLeft.coerceAtLeast(0f).dp)
+    if (paddingRight != null) modifier = modifier.padding(end = paddingRight.coerceAtLeast(0f).dp)
 
     if (zIndexVal != null) modifier = modifier.zIndex(zIndexVal)
 
@@ -516,7 +672,9 @@ private fun buildShape(
     return null
 }
 
+// Legacy: unparsable colours fall back to black.
 internal fun parseColorSafe(colorStr: String): Color {
+    if (colorStr.equals("transparent", ignoreCase = true)) return Color.Transparent
     return try {
         if (colorStr.startsWith("rgba")) {
             val parts = colorStr.removePrefix("rgba(").removeSuffix(")").split(",").map { it.trim() }
@@ -530,6 +688,20 @@ internal fun parseColorSafe(colorStr: String): Color {
             Color(parseColor(colorStr))
         }
     } catch (_: Exception) {
-        Color.Transparent
+        Color.Black
     }
+}
+
+// One SVG-capable ImageLoader per process.
+private object SvgImageLoader {
+    @Volatile
+    private var loader: ImageLoader? = null
+
+    fun get(context: android.content.Context): ImageLoader =
+        loader ?: synchronized(this) {
+            loader ?: ImageLoader.Builder(context.applicationContext)
+                .components { add(SvgDecoder.Factory()) }
+                .build()
+                .also { loader = it }
+        }
 }

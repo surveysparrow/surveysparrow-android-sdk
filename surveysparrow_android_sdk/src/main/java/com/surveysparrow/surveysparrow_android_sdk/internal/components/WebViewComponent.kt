@@ -1,10 +1,12 @@
 package com.surveysparrow.surveysparrow_android_sdk.internal.components
 
+import com.surveysparrow.surveysparrow_android_sdk.internal.SpotCheckSdk
 import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.MutableContextWrapper
 import androidx.activity.result.ActivityResultLauncher
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -60,6 +62,7 @@ private val messageMutex = Mutex()
 
 /** Stable per-[WebView] — survives [androidx.compose.runtime.key] / subtree recreation (see Builder). */
 private const val SPOTCHECK_WEBVIEW_BRIDGE_TAG = 0x53504348
+private const val SPOTCHECK_WEBVIEW_URI_TAG = 0x53504349
 
 private class WebViewFileChooserBridge {
     var isCaptureImageActive: Boolean = false
@@ -78,14 +81,6 @@ private fun ensureWebViewFileChooserBridge(wv: WebView): WebViewFileChooserBridg
     return b
 }
 
-private val UNMOUNT_APP_JS = """
-        (function() {
-            window.dispatchEvent(new MessageEvent('message', {
-                data: {"type":"UNMOUNT_APP"}
-            }));
-        })();
-    """.trimIndent()
-
 internal object WebViewRefHolder {
     var classicWebView: WebView? = null
     var chatWebView: WebView? = null
@@ -96,14 +91,6 @@ internal object WebViewRefHolder {
 
     fun evaluateJsOnChat(js: String) {
         chatWebView?.post { chatWebView?.evaluateJavascript(js, null) }
-    }
-
-    fun injectUnmountApp(isCurrentSpotcheckChat: Boolean?) {
-        if (isCurrentSpotcheckChat == true) {
-            evaluateJsOnChat(UNMOUNT_APP_JS)
-        } else {
-            evaluateJsOnClassic(UNMOUNT_APP_JS)
-        }
     }
 }
 
@@ -133,16 +120,9 @@ internal fun WebViewContent(executeBridge: ExecuteBridge) {
         if (it == JSONObject.NULL) null else it as? Boolean
     }
 
+    // Backend injects via payload.webview.inject.
     LaunchedEffect(isChatLoading, isClassicLoading, webViewInjectionData) {
         executeBridge.execute("webviewComponent.handleWebViewInjection")
-
-        if (webViewInjectionData.isNotEmpty()) {
-            if (isCurrentSpotcheckChat == false && !isClassicLoading) {
-                WebViewRefHolder.evaluateJsOnClassic(webViewInjectionData)
-            } else if (isCurrentSpotcheckChat == true && !isChatLoading) {
-                WebViewRefHolder.evaluateJsOnChat(webViewInjectionData)
-            }
-        }
     }
 
     val context = remember(state) {
@@ -185,17 +165,26 @@ private fun WebViewRendererContent(
     val context = LocalContext.current
 
     val webView = remember(uri, isChat) {
-        val existingWebView = if (config != null) {
+        val configWebView = if (config != null) {
             if (isChat) config.chatWebViewRef else config.classicWebViewRef
         } else null
+        // Apps often recreate the config on rotation; reuse the process-wide WebView for the same uri.
+        val heldWebView = (if (isChat) WebViewRefHolder.chatWebView else WebViewRefHolder.classicWebView)
+            ?.takeIf { it.getTag(SPOTCHECK_WEBVIEW_URI_TAG) == uri }
+        val existingWebView = configWebView ?: heldWebView
 
         if (existingWebView != null) {
+            // Rotation recreates the Activity; re-point the kept WebView at the current one.
+            (existingWebView.context as? MutableContextWrapper)?.baseContext = context
             ensureWebViewFileChooserBridge(existingWebView)
             if (isChat) WebViewRefHolder.chatWebView = existingWebView
             else WebViewRefHolder.classicWebView = existingWebView
+            if (config != null) {
+                if (isChat) config.chatWebViewRef = existingWebView else config.classicWebViewRef = existingWebView
+            }
             existingWebView
         } else {
-            WebView(context).apply {
+            WebView(MutableContextWrapper(context)).apply {
                 ensureWebViewFileChooserBridge(this)
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
@@ -281,8 +270,14 @@ private fun WebViewRendererContent(
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
                         view?.evaluateJavascript(RN_WEBVIEW_POLYFILL_JS, null)
-                        view?.evaluateJavascript(CSS_INJECTION_JS, null)
-                        view?.evaluateJavascript(FOCUSIN_LISTENER_JS, null)
+                        // Backend page script when sent; built-in one otherwise.
+                        val remote = SpotCheckSdk.instance.remoteWebViewScript
+                        if (remote != null) {
+                            view?.evaluateJavascript(remote, null)
+                        } else {
+                            view?.evaluateJavascript(CSS_INJECTION_JS, null)
+                            view?.evaluateJavascript(FOCUSIN_LISTENER_JS, null)
+                        }
 
                         CoroutineScope(Dispatchers.IO).launch {
                             executeBridge.execute("webviewComponent.handleWebViewInjection")
@@ -318,6 +313,7 @@ private fun WebViewRendererContent(
                     if (isChat) WebViewRefHolder.chatWebView = this
                     else WebViewRefHolder.classicWebView = this
                 }
+                setTag(SPOTCHECK_WEBVIEW_URI_TAG, uri)
                 loadUrl(uri)
             }
         }
@@ -454,7 +450,14 @@ private class SpotCheckWebChromeClient(
     }
 
     override fun onPermissionRequest(request: PermissionRequest) {
-        (appContext as? Activity)?.runOnUiThread {
+        var ctx: Context? = appContext
+        while (ctx is android.content.ContextWrapper && ctx !is Activity) ctx = ctx.baseContext
+        val activity = ctx as? Activity
+        if (activity == null) {
+            request.deny()
+            return
+        }
+        activity.runOnUiThread {
             val allGranted = request.resources.all { res ->
                 when (res) {
                     PermissionRequest.RESOURCE_AUDIO_CAPTURE ->
@@ -485,6 +488,6 @@ private fun buildWebViewMessageParams(message: String): JSONObject {
 
 private const val RN_WEBVIEW_POLYFILL_JS = """(function(){if(!window.ReactNativeWebView){window.ReactNativeWebView={postMessage:function(d){try{SsAndroidSdk.shareData(d)}catch(e){try{Android.onMessageReceive(d)}catch(e2){}}}}}})();"""
 
-private const val CSS_INJECTION_JS = """(function(){var s=document.createElement("style");s.innerHTML=".surveysparrow-chat__wrapper .ss-language-selector--wrapper{margin-right:45px;}.close-btn-chat--spotchecks{display:none!important;}";document.body.appendChild(s);})();"""
+private const val CSS_INJECTION_JS = """(function(){var s=document.createElement("style");s.innerHTML=".close-btn-chat--spotchecks{display:none!important;}";(document.head||document.documentElement).appendChild(s);})();"""
 
 private const val FOCUSIN_LISTENER_JS = """(function(){document.addEventListener('focusin',function(e){var el=e.target;if(el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.isContentEditable)){var rect=el.getBoundingClientRect();try{SsAndroidSdk.shareData(JSON.stringify({type:'position',y:el.getBoundingClientRect().top}))}catch(err){}}});})();"""

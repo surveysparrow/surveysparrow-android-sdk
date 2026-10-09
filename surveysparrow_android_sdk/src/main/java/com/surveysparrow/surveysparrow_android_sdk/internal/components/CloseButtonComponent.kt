@@ -33,7 +33,11 @@ private fun CloseButtonContent(executeBridge: ExecuteBridge) {
         ?.optJSONObject("spotCheckDetails")
         ?.optJSONObject("closeButton")
 
-    LaunchedEffect(closeButton?.toString()) {
+    val isRTLLanguage = state.optJSONObject("SpotCheckState")
+        ?.optJSONObject("spotCheckDetails")
+        ?.optBoolean("isRTLLanguage", false) ?: false
+
+    LaunchedEffect(closeButton?.toString(), isRTLLanguage) {
         val result = executeBridge.execute("closeButton.getCloseButtonStyles")
         if (result != null && result != "null") {
             try {
@@ -53,7 +57,6 @@ private fun CloseButtonContent(executeBridge: ExecuteBridge) {
             handlers = mapOf(
                 "handleClosePress" to { _ ->
                     CoroutineScope(Dispatchers.IO).launch {
-                        com.surveysparrow.surveysparrow_android_sdk.internal.SpotCheckSdk.instance.injectUnmountApp()
                         executeBridge.execute("closeButton.handleCloseButton")
                     }
                 }

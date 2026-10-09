@@ -44,12 +44,17 @@ internal fun WrapperComponent(
     val textPosition = spotCheckDetails.optInt("textPosition", 0)
     val mode = spotCheckDetails.optString("mode", "")
     val isFullScreenMode = spotCheckDetails.optBoolean("isFullScreenMode", false)
+    val isRTLLanguage = spotCheckDetails.optBoolean("isRTLLanguage", false)
+    val showSurveyContent = spotCheckDetails.optBoolean("showSurveyContent", true)
+    val closeButton = spotCheckDetails.optJSONObject("closeButton")?.toString()
+    val spotcheckId = spotCheckState.optJSONObject("currentSpotcheck")?.opt("spotcheckID")?.toString()
 
     LaunchedEffect(
         screenHeight, screenWidth, showSpotCheck,
         isMounted, isVisible, mode, isFullScreenMode,
         currentQuestionHeight, miniCardHeight,
         isExiting, keyBoardHeight, textPosition,
+        isRTLLanguage, showSurveyContent, closeButton, spotcheckId,
     ) {
         val params = JSONObject().apply {
             put("screenHeight", screenHeight)

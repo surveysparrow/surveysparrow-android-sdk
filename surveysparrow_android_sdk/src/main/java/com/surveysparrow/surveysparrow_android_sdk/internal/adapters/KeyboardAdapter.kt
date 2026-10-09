@@ -9,11 +9,14 @@ internal class KeyboardAdapter {
     private var activity: Activity? = null
     private var savedSoftInputMode: Int? = null
 
-    fun setActivity(activity: Activity?) {
+    // Returns true when a different Activity was set (e.g. recreated on rotation).
+    fun setActivity(activity: Activity?): Boolean {
+        val changed = this.activity != null && activity != null && this.activity !== activity
         this.activity = activity
         if (savedSoftInputMode == null) {
             savedSoftInputMode = activity?.window?.attributes?.softInputMode
         }
+        return changed
     }
 
     fun pauseDefaultKeyboardBehavior() {

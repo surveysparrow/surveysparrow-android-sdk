@@ -33,7 +33,7 @@ internal object SpotCheckApiClient {
                     null
                 }
             } catch (e: Exception) {
-                Log.e("SpotCheckSDK", "Failed to fetch init data", e)
+                Log.e("SpotCheckSDK", "Failed to fetch init data: $e", e)
                 null
             }
         }

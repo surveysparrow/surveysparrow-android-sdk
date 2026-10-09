@@ -1,19 +1,20 @@
-# Survey Sparrow Android SDK
+# SurveySparrow Android SDK
 
-[SurveySparrow](https:://surveysparrow.com) Android SDK enables you to collect feedback from your mobile app. Embed the Classic, Chat & NPS surveys in your Android application seamlessly with few lines of code.
+Use [SurveySparrow](https://surveysparrow.com) in your Android app to collect feedback: the **Normal SDK** embeds Classic, Chat, and NPS surveys in your UI, and **SpotChecks** lets you trigger surveys from screens and events you define. Both ship in one library.
 
-<br>
+**Latest release: [1.2.11](https://github.com/surveysparrow/surveysparrow-android-sdk/releases/tag/1.2.11)**.
 
-### SpotCheck Documentation is available here 
+## Add the dependency
 
-#### [SpotCheck-Android-Docs](https://developers.surveysparrow.com/spotchecks/mobile-spotchecks/android)
+Add JitPack to your root `build.gradle` repositories, then in your app module:
 
-<br>
+```gradle
+implementation 'com.github.surveysparrow:surveysparrow-android-sdk:1.2.11'
+```
 
-#### Survey's Normal SDK Share is available here
+## Implementation guides
 
-#### [Normal SDK Share](https://github.com/surveysparrow/surveysparrow-android-sdk/tree/0.6.6)
+- **Normal SDK** – [developers.surveysparrow.com/sdk/android](https://developers.surveysparrow.com/sdk/android)
+- **SpotChecks** – [developers.surveysparrow.com/spotchecks/mobile-spotchecks/android](https://developers.surveysparrow.com/spotchecks/mobile-spotchecks/android)
 
-<br>
-
-> Please submit bugs/issues through GitHub issues we will try to fix it ASAP.
+Report bugs and feature requests on [GitHub Issues](https://github.com/surveysparrow/surveysparrow-android-sdk/issues).

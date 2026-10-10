@@ -252,6 +252,8 @@ internal class JsEngine(
         private const val EXECUTE_TIMEOUT_MS = 15_000L
 
         private val BOOTSTRAP_JS = """
+            // Chrome < 71 WebViews have no globalThis; backend functions may use it.
+            if (typeof globalThis === 'undefined') { window.globalThis = window; }
             var _functions = {};
             var _callbacks = {};
             var _cbId = 0;

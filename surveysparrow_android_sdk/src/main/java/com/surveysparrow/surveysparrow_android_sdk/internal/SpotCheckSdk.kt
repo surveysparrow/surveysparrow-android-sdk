@@ -55,6 +55,7 @@ internal class SpotCheckSdk private constructor() {
     // True when the last init attempt failed and no new one has started.
     @Volatile
     private var initFailed = false
+    val hasInitFailed: Boolean get() = initFailed
     private val initMutex = kotlinx.coroutines.sync.Mutex()
     private var domainName: String = ""
 

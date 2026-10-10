@@ -9,10 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.surveysparrow.surveysparrow_android_sdk.internal.SpotCheckSdk
 import com.surveysparrow.surveysparrow_android_sdk.internal.components.SpotCheckButtonRoot
@@ -24,30 +21,17 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SpotCheck(config: SpotCheckConfig) {
-    var hasError by remember { mutableStateOf(false) }
-
-    if (hasError) return
-
-    SpotCheckSafe(
-        config = config,
-        onError = { hasError = true },
-    )
-}
-
-@Composable
-private fun SpotCheckSafe(
-    config: SpotCheckConfig,
-    onError: () -> Unit,
-) {
     val context = LocalContext.current
     val sdk = SpotCheckSdk.instance
 
+    // On failure nothing renders (gated on isNewArchInitialized); a later track call retries init.
     LaunchedEffect(Unit) {
         try {
             config.ensureInitialized(context)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e("SpotCheckSDK", "Initialization failed", e)
-            onError()
         }
     }
 

@@ -3,6 +3,7 @@ package com.surveysparrow.surveysparrow_android_sdk
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import android.view.WindowManager
 import android.webkit.WebView
 import androidx.compose.runtime.getValue
@@ -12,7 +13,11 @@ import androidx.compose.runtime.setValue
 import com.surveysparrow.surveysparrow_android_sdk.internal.SpotCheckSdk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+private const val INIT_RETRY_GAP_MS = 10_000L
 
 class SpotCheckConfig(
     var domainName: String,
@@ -43,8 +48,12 @@ class SpotCheckConfig(
 
     internal var isNewArchInitialized by mutableStateOf(false)
 
+    @Volatile
+    private var lastInitAttempt = 0L
+
     internal suspend fun ensureInitialized(context: Context) {
         if (isNewArchInitialized) return
+        lastInitAttempt = System.currentTimeMillis()
         SpotCheckSdk.instance.initialize(
             context = context,
             domainName = domainName,
@@ -58,14 +67,29 @@ class SpotCheckConfig(
         isNewArchInitialized = true
     }
 
+    // A failed init (e.g. offline at mount) is retried on the next track call, at most every 10s.
+    private suspend fun retryInitIfFailed() {
+        if (isNewArchInitialized || !SpotCheckSdk.instance.hasInitFailed) return
+        val context = activity ?: return
+        if (System.currentTimeMillis() - lastInitAttempt < INIT_RETRY_GAP_MS) return
+        try {
+            // Finish even if the calling screen leaves; a cancelled init would leave track calls waiting.
+            withContext(NonCancellable) { ensureInitialized(context) }
+        } catch (e: Exception) {
+            Log.e("SpotCheckSDK", "Initialization retry failed", e)
+        }
+    }
+
     internal suspend fun internalTrackScreen(
         screen: String,
         options: Map<String, Any> = emptyMap(),
     ) {
+        retryInitIfFailed()
         SpotCheckSdk.instance.trackScreen(screen, options)
     }
 
     internal suspend fun internalTrackEvent(screen: String, event: Map<String, Any>) {
+        retryInitIfFailed()
         SpotCheckSdk.instance.trackEvent(screen, event)
     }
 

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Resources
 import android.os.Build
+import androidx.core.content.pm.PackageInfoCompat
 
 import com.surveysparrow.surveysparrow_android_sdk.SsSpotcheckListener
 import com.surveysparrow.surveysparrow_android_sdk.internal.adapters.KeyboardAdapter
@@ -134,7 +135,7 @@ internal class SpotCheckSdk private constructor() {
                 put("framework", "android")
                 put("sdkVersion", JsEngine.SDK_VERSION)
                 put("userAgent", buildUserAgent())
-                put("device", buildDeviceFacts())
+                put("device", buildDeviceFacts(context.applicationContext))
             }
             SpotCheckStore.dispatch(JSONObject().apply {
                 put("params", initParams)
@@ -343,7 +344,7 @@ internal class SpotCheckSdk private constructor() {
     }
 
     // Raw device facts; the backend builds the User-Agent from these.
-    private fun buildDeviceFacts(): JSONObject {
+    private fun buildDeviceFacts(appContext: Context): JSONObject {
         val dm = Resources.getSystem().displayMetrics
         val dpr = dm.density.toInt()
         val isTablet = (dpr < 2 && (dm.widthPixels >= 1000 || dm.heightPixels >= 1000)) ||
@@ -352,6 +353,13 @@ internal class SpotCheckSdk private constructor() {
             put("os", "android")
             put("osVersion", Build.VERSION.RELEASE)
             put("isTablet", isTablet)
+            // Host app release; the backend keeps the SDK version of the newest build.
+            try {
+                val pkg = appContext.packageManager.getPackageInfo(appContext.packageName, 0)
+                pkg.versionName?.takeIf { it.isNotEmpty() }?.let { put("appVersion", it) }
+                put("appBuild", PackageInfoCompat.getLongVersionCode(pkg).toString())
+            } catch (_: Throwable) {
+            }
         }
     }
 

@@ -331,7 +331,7 @@ class SpotCheckConfig(
                         val idDouble = id.toString().toDoubleOrNull()
 
                         if (idDouble != null) {
-                            val formattedId = String.format("%.0f", idDouble)
+                            val formattedId = String.format(Locale.US, "%.0f", idDouble)
                             selectedSpotCheckID = Integer.parseInt(formattedId)
                         } else {
                             selectedSpotCheckID = -1
@@ -568,7 +568,7 @@ class SpotCheckConfig(
             )
 
             val response =
-                apiService.closeSpotCheck(spotCheckContactID = String.format("%.0f", spotCheckContactID), payload = payload)
+                apiService.closeSpotCheck(spotCheckContactID = String.format(Locale.US, "%.0f", spotCheckContactID), payload = payload)
             if (response.success == true) {
                 CoroutineScope(Dispatchers.IO).launch {
                     spotCheckListener?.onCloseButtonTap()
@@ -622,7 +622,7 @@ class SpotCheckConfig(
         isBannerImageOn = (appearance["bannerImage"] as? Map<*, *>)?.get("enabled") as? Boolean ?: false
 
         val sb = StringBuilder("https://$domainName/n/spotcheck/$triggerToken/${if (isChat) "config" else "bootstrap"}")
-        sb.append("?spotcheckContactId=${String.format("%.0f", spotCheckContactID)}")
+        sb.append("?spotcheckContactId=${String.format(Locale.US, "%.0f", spotCheckContactID)}")
         sb.append("&traceId=$traceId")
         sb.append("&spotcheckUrl=$screen")
         variables.forEach { (key, value) -> sb.append("&$key=$value") }
@@ -648,7 +648,18 @@ class SpotCheckConfig(
             val apiService = RetrofitClient.create("https://$domainName")
             val userAgent = getUserAgent()
             val response = apiService.contentApi(spotCheckURL, userAgent)
+            // A non-2xx bootstrap (e.g. 403) must not be injected as the survey state.
+            if (!response.isSuccessful) {
+                Log.e("SPOT-CHECK", "Bootstrap failed with status ${response.code()}")
+                withContext(Dispatchers.Main) { onClose() }
+                return
+            }
             val responseBodyString = response.body()?.string() ?: ""
+            if (!responseBodyString.trim().startsWith("{")) {
+                Log.e("SPOT-CHECK", "Bootstrap returned no JSON")
+                withContext(Dispatchers.Main) { onClose() }
+                return
+            }
 
             val gson = GsonBuilder().serializeNulls().disableHtmlEscaping().create()
 

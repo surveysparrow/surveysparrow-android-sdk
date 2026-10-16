@@ -44,7 +44,8 @@ import kotlin.math.sqrt
 private class BackdropBlurState {
     var image by mutableStateOf<ImageBitmap?>(null)
     var windowSize by mutableStateOf(IntSize.Zero)
-    var capturing by mutableStateOf(false)
+    // Starts false so the overlay is hidden from its first frame until the snapshot is done.
+    var ready by mutableStateOf(false)
     var positionInWindow = Offset.Zero
 }
 
@@ -53,13 +54,11 @@ internal fun Modifier.backdropBlur(blurDp: Float): Modifier {
     val view = LocalView.current
     val density = LocalDensity.current.density
     val configuration = LocalConfiguration.current
-    val state = remember { BackdropBlurState() }
     val active = blurDp > 0f && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+    val state = remember(active, blurDp, configuration.screenWidthDp, configuration.screenHeightDp) { BackdropBlurState() }
 
-    LaunchedEffect(active, blurDp, configuration.screenWidthDp, configuration.screenHeightDp) {
-        state.image = null
+    LaunchedEffect(state) {
         if (!active) return@LaunchedEffect
-        state.capturing = true
         try {
             // Overlay is hidden while capturing; wait until that frame is on screen.
             withFrameNanos { }
@@ -78,13 +77,13 @@ internal fun Modifier.backdropBlur(blurDp: Float): Modifier {
         } catch (_: Throwable) {
             state.image = null
         } finally {
-            state.capturing = false
+            state.ready = true
         }
     }
 
     if (!active) return this
     return this
-        .graphicsLayer { alpha = if (state.capturing) 0f else 1f }
+        .graphicsLayer { alpha = if (state.ready) 1f else 0f }
         .onGloballyPositioned { state.positionInWindow = it.positionInWindow() }
         .drawBehind {
             val image = state.image ?: return@drawBehind

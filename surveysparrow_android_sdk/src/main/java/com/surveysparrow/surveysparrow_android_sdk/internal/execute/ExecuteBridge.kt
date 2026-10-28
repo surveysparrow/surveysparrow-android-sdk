@@ -82,6 +82,13 @@ internal class ExecuteBridge(
             } catch (_: Exception) {}
         }
 
+        // Breadcrumbs from backend functions; data is already primitives only.
+        jsEngine.onAddBreadcrumb = { message, dataJson ->
+            try {
+                sentry.addBreadcrumb(message, jsonToMap(JSONObject(dataJson)))
+            } catch (_: Exception) {}
+        }
+
         jsEngine.onPauseKeyboard = {
             keyboard.pauseDefaultKeyboardBehavior()
         }

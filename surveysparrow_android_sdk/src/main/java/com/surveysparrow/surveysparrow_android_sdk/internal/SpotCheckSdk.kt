@@ -352,6 +352,7 @@ internal class SpotCheckSdk private constructor() {
         return JSONObject().apply {
             put("os", "android")
             put("osVersion", Build.VERSION.RELEASE)
+            Build.MODEL?.takeIf { it.isNotEmpty() }?.let { put("model", it) }
             put("isTablet", isTablet)
             // Host app release; the backend keeps the SDK version of the newest build.
             try {

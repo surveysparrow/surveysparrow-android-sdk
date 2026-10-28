@@ -41,6 +41,7 @@ internal class JsEngine(
     var onPartialSubmission: ((String) -> Unit)? = null
     var onCloseButtonTap: (() -> Unit)? = null
     var onCaptureError: ((String) -> Unit)? = null
+    var onAddBreadcrumb: ((String, String) -> Unit)? = null
     var onPauseKeyboard: (() -> Unit)? = null
     var onResumeKeyboard: (() -> Unit)? = null
     var onWebViewInject: ((String, String) -> Unit)? = null
@@ -167,6 +168,11 @@ internal class JsEngine(
         }
 
         @JavascriptInterface
+        fun addBreadcrumb(message: String, dataJson: String) {
+            onAddBreadcrumb?.invoke(message, dataJson)
+        }
+
+        @JavascriptInterface
         fun pauseKeyboard() {
             onPauseKeyboard?.invoke()
         }
@@ -182,8 +188,10 @@ internal class JsEngine(
         }
 
         @JavascriptInterface
-        fun onExecuteErrorBridge(callId: String, functionName: String, error: String) {
+        fun onExecuteErrorBridge(callId: String, functionName: String, error: String, reported: Boolean) {
             pendingCalls.remove(callId)?.complete(null)
+            // The function already reported this failure itself.
+            if (reported) return
             onExecuteError?.invoke(functionName, error)
         }
 
@@ -259,6 +267,34 @@ internal class JsEngine(
             var _cbId = 0;
             var _fetchCallbacks = {};
 
+            // Flags an error the function already reported, so execute skips its own report.
+            function _markReported(error, reported) {
+                if (error && typeof error === 'object') {
+                    try { Object.defineProperty(error, '__ssReported', { value: true, configurable: true }); } catch(e) {}
+                }
+                if (error != null) reported.push(error);
+            }
+
+            function _wasReported(error, reported) {
+                try {
+                    if (error && typeof error === 'object' && error.__ssReported === true) return true;
+                } catch(e) {}
+                return error != null && reported.indexOf(error) !== -1;
+            }
+
+            // Keeps only primitive values, with strings capped.
+            function _breadcrumbData(data) {
+                var out = {};
+                if (!data || typeof data !== 'object') return out;
+                var keys = Object.keys(data).slice(0, 20);
+                for (var i = 0; i < keys.length; i++) {
+                    var v = data[keys[i]];
+                    if (typeof v === 'string') out[keys[i]] = v.slice(0, 200);
+                    else if (typeof v === 'number' || typeof v === 'boolean' || v === null) out[keys[i]] = v;
+                }
+                return out;
+            }
+
             function _storeFunctions(data) {
                 _functions = data;
             }
@@ -329,7 +365,7 @@ internal class JsEngine(
                         funcString = funcString[pathParts[i]];
                     }
                     if (!funcString || typeof funcString !== 'string') {
-                        NativeBridge.onExecuteErrorBridge(callId, functionName, 'Function ' + functionName + ' not found');
+                        NativeBridge.onExecuteErrorBridge(callId, functionName, 'Function ' + functionName + ' not found', false);
                         return;
                     }
                     var func = eval('(' + funcString + ')');
@@ -337,6 +373,7 @@ internal class JsEngine(
                     state = state || {};
                     var sdkVersion = '""" + SDK_VERSION + """';
                     params.sdkVersion = sdkVersion;
+                    var reported = [];
                     var payload = {
                         params: params,
                         state: state,
@@ -375,6 +412,7 @@ internal class JsEngine(
                         },
                         sentry: {
                             captureP0Error: function(error, source, context) {
+                                _markReported(error, reported);
                                 NativeBridge.captureError(JSON.stringify({
                                     priority: 'P0',
                                     error: error ? (error.message || String(error)) : 'Unknown',
@@ -383,12 +421,19 @@ internal class JsEngine(
                                 }));
                             },
                             captureP1Error: function(error, source, context) {
+                                _markReported(error, reported);
                                 NativeBridge.captureError(JSON.stringify({
                                     priority: 'P1',
                                     error: error ? (error.message || String(error)) : 'Unknown',
                                     source: source || 'GENERAL',
                                     context: context || {}
                                 }));
+                            },
+                            addBreadcrumb: function(message, data) {
+                                try {
+                                    if (typeof message !== 'string' || !message) return;
+                                    NativeBridge.addBreadcrumb(message.slice(0, 200), JSON.stringify(_breadcrumbData(data)));
+                                } catch(e) {}
                             }
                         },
                         keyboard: {
@@ -410,13 +455,13 @@ internal class JsEngine(
                         result.then(function(r) {
                             NativeBridge.onExecuteResultBridge(callId, JSON.stringify(r === undefined ? null : r));
                         }).catch(function(e) {
-                            NativeBridge.onExecuteErrorBridge(callId, functionName, functionName + ' rejected: ' + (e.message || e));
+                            NativeBridge.onExecuteErrorBridge(callId, functionName, functionName + ' rejected: ' + (e && e.message || e), _wasReported(e, reported));
                         });
                     } else {
                         NativeBridge.onExecuteResultBridge(callId, JSON.stringify(result === undefined ? null : result));
                     }
                 } catch(e) {
-                    NativeBridge.onExecuteErrorBridge(callId, functionName, functionName + ' threw: ' + (e.message || e));
+                    NativeBridge.onExecuteErrorBridge(callId, functionName, functionName + ' threw: ' + (e && e.message || e), typeof reported !== 'undefined' && _wasReported(e, reported));
                 }
             }
 

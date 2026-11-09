@@ -203,9 +203,24 @@ public final class SurveySparrow {
             }
         } catch (InterruptedException | ExecutionException | JSONException e) {
             Log.e(SS_VALIDATION, "Error in processing apiCallTask json: " + e);
+            // validation could not complete: do not open, tell the listener why
+            if (validationListener != null) {
+                validationListener.onSsValidateSurvey(validationFailedJson());
+            }
+            return;
         }
 
         startSurveyForResult(requestCode);
+    }
+
+    private static JSONObject validationFailedJson() {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("active", false);
+            json.put("reason", "validation_failed");
+        } catch (JSONException ignored) {
+        }
+        return json;
     }
 
     /**

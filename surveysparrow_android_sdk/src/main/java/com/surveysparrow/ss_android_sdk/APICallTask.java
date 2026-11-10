@@ -36,7 +36,8 @@ public class APICallTask extends AsyncTask<String, Void, String> {
         try {
             if (customparam != null) {
                 for (CustomParam param : customparam) {
-                    if( param.name == "emailaddress"){
+                    // name is a runtime CharSequence; == only matched interned literals
+                    if (param.name != null && "emailaddress".contentEquals(param.name)) {
                         email = param.value.toString();
                         break;
                     }

@@ -70,6 +70,9 @@ private class WebViewFileChooserBridge {
     var fileChooser: ActivityResultLauncher<Intent>? = null
     var imageCapture: ActivityResultLauncher<Intent>? = null
     var cameraPermission: ActivityResultLauncher<String>? = null
+    var audioPermission: ActivityResultLauncher<String>? = null
+    // Page mic request waiting for the user's answer.
+    var pendingAudioRequest: PermissionRequest? = null
 }
 
 private fun ensureWebViewFileChooserBridge(wv: WebView): WebViewFileChooserBridge {
@@ -370,14 +373,12 @@ private fun WebViewRendererContent(
 
     val audioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { }
-
-    LaunchedEffect(Unit) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        }
+    ) { isGranted ->
+        // Answer the page's mic request with the user's choice.
+        val bridge = webView.getTag(SPOTCHECK_WEBVIEW_BRIDGE_TAG) as? WebViewFileChooserBridge
+            ?: return@rememberLauncherForActivityResult
+        bridge.pendingAudioRequest?.let { if (isGranted) it.grant(it.resources) else it.deny() }
+        bridge.pendingAudioRequest = null
     }
 
     val fileChooserLauncher = rememberLauncherForActivityResult(
@@ -397,6 +398,7 @@ private fun WebViewRendererContent(
         b.fileChooser = fileChooserLauncher
         b.imageCapture = imageCaptureLauncher
         b.cameraPermission = cameraPermissionLauncher
+        b.audioPermission = audioPermissionLauncher
         webView.webChromeClient = SpotCheckWebChromeClient(webView, context)
     }
 
@@ -466,8 +468,21 @@ private class SpotCheckWebChromeClient(
                     else -> true
                 }
             }
-            if (allGranted) request.grant(request.resources)
-            else request.deny()
+            if (allGranted) {
+                request.grant(request.resources)
+            } else {
+                // Mic is asked only now, when a voice question needs it.
+                val b = ensureWebViewFileChooserBridge(webView)
+                b.pendingAudioRequest?.deny()
+                b.pendingAudioRequest = request
+                val launcher = b.audioPermission
+                if (launcher != null) {
+                    launcher.launch(Manifest.permission.RECORD_AUDIO)
+                } else {
+                    b.pendingAudioRequest = null
+                    request.deny()
+                }
+            }
         }
     }
 }

@@ -68,7 +68,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.zIndex
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import android.annotation.SuppressLint
@@ -141,6 +140,9 @@ private class SpotCheckState {
     var mUploadMessage: ValueCallback<Uri?>? by mutableStateOf(null)
     var mUploadMessageArray: ValueCallback<Array<Uri?>?>? by mutableStateOf(null)
     var audioPermissionGranted by mutableStateOf(false)
+    // Page mic request waiting for the user's answer.
+    var pendingAudioRequest: PermissionRequest? = null
+    var requestAudioPermission: (() -> Unit)? = null
 }
 
 private class SpotCheckEventHandler(private val config: SpotCheckConfig) {
@@ -425,20 +427,13 @@ fun SpotCheck(config: SpotCheckConfig) {
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         state.audioPermissionGranted = isGranted
+        // Answer the page's mic request with the user's choice.
+        state.pendingAudioRequest?.let { if (isGranted) it.grant(it.resources) else it.deny() }
+        state.pendingAudioRequest = null
     }
 
-    LaunchedEffect(Unit) {
-        val isAlreadyGranted = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.RECORD_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (!isAlreadyGranted) {
-            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        } else {
-            state.audioPermissionGranted = true
-        }
-    }
+    // Mic is asked only when a voice question requests it, not at load.
+    state.requestAudioPermission = { audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }
 
     fun extractActivity(context: Context): Activity? {
         var ctx = context
@@ -844,11 +839,12 @@ private fun createWebView(
                     if (allGranted) {
                         request.grant(request.resources)
                     } else {
-                        ActivityCompat.requestPermissions(
-                            context,
-                            permissions.toTypedArray(),
-                            1234
-                        )
+                        state.pendingAudioRequest?.deny()
+                        state.pendingAudioRequest = request
+                        state.requestAudioPermission?.invoke() ?: run {
+                            state.pendingAudioRequest = null
+                            request.deny()
+                        }
                     }
                 }
             }

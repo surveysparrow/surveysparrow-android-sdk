@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import android.content.res.Resources
 import android.util.Log
 import android.view.WindowManager
+import android.webkit.PermissionRequest
 import android.webkit.WebView
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
@@ -71,6 +72,9 @@ class SpotCheckConfig(
     var isMounted by mutableStateOf(false)
     var classicWebViewRef by  mutableStateOf<WebView?>(null)
     var chatWebViewRef by  mutableStateOf<WebView?>(null)
+    // Mic prompt of the SpotCheck screen now shown; kept here because the WebView outlives screens.
+    internal var requestAudioPermission: (() -> Unit)? = null
+    internal var pendingAudioRequest: PermissionRequest? = null
     var activity: Activity? = null
     var originalSoftInputMode by mutableStateOf<Int?>(null)
     var isSpotCheckButton by  mutableStateOf(false)

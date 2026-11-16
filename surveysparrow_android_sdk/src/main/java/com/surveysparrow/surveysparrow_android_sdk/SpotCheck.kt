@@ -140,9 +140,6 @@ private class SpotCheckState {
     var mUploadMessage: ValueCallback<Uri?>? by mutableStateOf(null)
     var mUploadMessageArray: ValueCallback<Array<Uri?>?>? by mutableStateOf(null)
     var audioPermissionGranted by mutableStateOf(false)
-    // Page mic request waiting for the user's answer.
-    var pendingAudioRequest: PermissionRequest? = null
-    var requestAudioPermission: (() -> Unit)? = null
 }
 
 private class SpotCheckEventHandler(private val config: SpotCheckConfig) {
@@ -428,12 +425,25 @@ fun SpotCheck(config: SpotCheckConfig) {
     ) { isGranted ->
         state.audioPermissionGranted = isGranted
         // Answer the page's mic request with the user's choice.
-        state.pendingAudioRequest?.let { if (isGranted) it.grant(it.resources) else it.deny() }
-        state.pendingAudioRequest = null
+        config.pendingAudioRequest?.let { if (isGranted) it.grant(it.resources) else it.deny() }
+        config.pendingAudioRequest = null
     }
 
-    // Mic is asked only when a voice question requests it, not at load.
-    state.requestAudioPermission = { audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }
+    // Mic is asked only when a voice question requests it; this screen's prompt is used while it is shown.
+    val requestAudio: () -> Unit = remember(audioPermissionLauncher) {
+        { audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }
+    }
+    DisposableEffect(config, requestAudio) {
+        config.requestAudioPermission = requestAudio
+        onDispose {
+            // Clear only our own prompt; the next screen may already have set its own.
+            if (config.requestAudioPermission === requestAudio) {
+                config.requestAudioPermission = null
+                config.pendingAudioRequest?.deny()
+                config.pendingAudioRequest = null
+            }
+        }
+    }
 
     fun extractActivity(context: Context): Activity? {
         var ctx = context
@@ -839,10 +849,10 @@ private fun createWebView(
                     if (allGranted) {
                         request.grant(request.resources)
                     } else {
-                        state.pendingAudioRequest?.deny()
-                        state.pendingAudioRequest = request
-                        state.requestAudioPermission?.invoke() ?: run {
-                            state.pendingAudioRequest = null
+                        config.pendingAudioRequest?.deny()
+                        config.pendingAudioRequest = request
+                        config.requestAudioPermission?.invoke() ?: run {
+                            config.pendingAudioRequest = null
                             request.deny()
                         }
                     }

@@ -256,7 +256,7 @@ internal class JsEngine(
     }
 
     companion object {
-        const val SDK_VERSION = "1.2.14"
+        const val SDK_VERSION = "1.3.0"
         private const val EXECUTE_TIMEOUT_MS = 15_000L
 
         private val BOOTSTRAP_JS = """

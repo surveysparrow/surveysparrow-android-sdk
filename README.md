@@ -2,14 +2,14 @@
 
 Use [SurveySparrow](https://surveysparrow.com) in your Android app to collect feedback: the **Normal SDK** embeds Classic, Chat, and NPS surveys in your UI, and **SpotChecks** lets you trigger surveys from screens and events you define. Both ship in one library.
 
-**Latest release: [1.2.11](https://github.com/surveysparrow/surveysparrow-android-sdk/releases/tag/1.2.11)**.
+**Latest release: [1.2.14](https://github.com/surveysparrow/surveysparrow-android-sdk/releases/tag/1.2.14)**.
 
 ## Add the dependency
 
 Add JitPack to your root `build.gradle` repositories, then in your app module:
 
 ```gradle
-implementation 'com.github.surveysparrow:surveysparrow-android-sdk:1.2.12'
+implementation 'com.github.surveysparrow:surveysparrow-android-sdk:1.2.14'
 ```
 
 ## Implementation guides

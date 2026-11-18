@@ -12,9 +12,9 @@ Add JitPack to your root `build.gradle` repositories, then in your app module:
 implementation 'com.github.surveysparrow:surveysparrow-android-sdk:1.3.0'
 ```
 
-**Requirements:** `minSdk` 24 or higher, `compileSdk` 34 or higher, a Jetpack Compose app for SpotChecks, and Android System WebView 80 or newer on the device.
+**Requirements:** `minSdk` 24 or higher, `compileSdk` 34 or higher, Kotlin 2.0 or newer (the SDK is built with Kotlin 2.0.21), a Jetpack Compose app for SpotChecks, and Android System WebView 80 or newer on the device.
 
-**Upgrading to 1.2.12:** the SDK no longer depends on Retrofit or Gson. Add them to your own dependencies if your app relied on them transitively.
+**Upgrading to 1.3.0:** the SDK no longer depends on Retrofit or Gson. Add them to your own dependencies if your app relied on them transitively.
 
 ## Implementation guides
 

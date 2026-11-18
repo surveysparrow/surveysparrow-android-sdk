@@ -60,7 +60,11 @@ internal class BindingResolver(
         return handlers[name]
     }
 
-    fun evaluateCondition(condition: Any?): Boolean {
+    // A malformed condition hides the node instead of crashing the host app.
+    fun evaluateCondition(condition: Any?): Boolean =
+        try { evaluate(condition) } catch (e: Exception) { false }
+
+    private fun evaluate(condition: Any?): Boolean {
         if (condition == null || condition == JSONObject.NULL) return true
         if (condition is Boolean) return condition
         if (condition is String) return condition.isNotEmpty()
@@ -69,14 +73,14 @@ internal class BindingResolver(
         if (condition is JSONObject) {
             if (condition.has("\$and")) {
                 val arr = condition.getJSONArray("\$and")
-                return (0 until arr.length()).all { evaluateCondition(arr.get(it)) }
+                return (0 until arr.length()).all { evaluate(arr.get(it)) }
             }
             if (condition.has("\$or")) {
                 val arr = condition.getJSONArray("\$or")
-                return (0 until arr.length()).any { evaluateCondition(arr.get(it)) }
+                return (0 until arr.length()).any { evaluate(arr.get(it)) }
             }
             if (condition.has("\$not")) {
-                return !evaluateCondition(condition.get("\$not"))
+                return !evaluate(condition.get("\$not"))
             }
             if (condition.has("\$eq")) {
                 val arr = condition.getJSONArray("\$eq")

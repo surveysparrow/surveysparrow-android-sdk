@@ -84,7 +84,8 @@ internal class SentryEnricher(
                 // DeviceInfoUtil is a process-wide singleton; only use it once the host's Sentry built it.
                 if (io.sentry.Sentry.isEnabled()) {
                     val info = DeviceInfoUtil.getInstance(appContext, options)
-                    event.contexts.setDevice(info.collectDeviceInformation(false, false))
+                    // Drop Sentry's install id; reports only need the device details.
+                    event.contexts.setDevice(info.collectDeviceInformation(false, false).apply { id = null })
                     event.contexts.setOperatingSystem(info.operatingSystem)
                 } else {
                     event.contexts.setDevice(Device().apply {

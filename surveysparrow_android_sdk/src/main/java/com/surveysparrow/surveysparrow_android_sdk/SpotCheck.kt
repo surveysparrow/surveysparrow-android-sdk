@@ -25,7 +25,8 @@ fun SpotCheck(config: SpotCheckConfig) {
     val sdk = SpotCheckSdk.instance
 
     // On failure nothing renders (gated on isNewArchInitialized); a later track call retries init.
-    LaunchedEffect(Unit) {
+    // Keyed on config: a new config (e.g. after login) passes its details to the SDK, as in 1.2.x.
+    LaunchedEffect(config) {
         try {
             config.ensureInitialized(context)
         } catch (e: kotlinx.coroutines.CancellationException) {
